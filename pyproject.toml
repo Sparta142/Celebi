@@ -1,0 +1,17 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "celebi"
+version = "0.1.0"
+description = "A Discord bot to support the ASTONISH community."
+license = "Proprietary"
+authors = ["Sparta142 <Sparta142@users.noreply.github.com>"]
+readme = "README.md"
+repository = "https://github.com/Sparta142/Celebi"
+
+[tool.poetry.dependencies]
+aiohttp = { url = "https://github.com/aio-libs/aiohttp/releases/download/v3.9.0b1/aiohttp-3.9.0b1.tar.gz" }
+"discord.py" = "^2.3"
+python = "^3.12"
