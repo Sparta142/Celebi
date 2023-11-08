@@ -13,11 +13,14 @@ repository = "https://github.com/Sparta142/Celebi"
 
 [tool.poetry.dependencies]
 aiohttp = { url = "https://github.com/aio-libs/aiohttp/releases/download/v3.9.0b1/aiohttp-3.9.0b1.tar.gz" }
+aiopokeapi = "^0.1.7"
 "discord.py" = { version = "^2.3", extras = ["speed"] }
 python = "^3.12"
 
 [tool.poetry.group.dev.dependencies]
+python-dotenv = "^1.0.0"
 ruff = "^0.1.4"
+pytest = "^7.4.3"
 
 [tool.ruff]
 line-length = 80
