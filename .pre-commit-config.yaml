@@ -5,6 +5,7 @@ repos:
       - id: check-added-large-files
       - id: check-yaml
       - id: end-of-file-fixer
+        exclude: '^tests/.+\.html'
       - id: trailing-whitespace
 
   - repo: https://github.com/python-poetry/poetry
