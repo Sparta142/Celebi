@@ -75,8 +75,10 @@ class Member(BaseModel):
     player_name: str = Field(alias='field_18')
     player_pronouns: str = Field(alias='field_19')
 
-    # TODO: Missing fields 20-24
+    # TODO: Missing fields 20-22
 
+    hover_image: str = Field(alias='field_23')
+    triggers_and_warnings: str = Field(alias='field_24')
     personal_computer: list[Pokemon] = Field(alias='field_25')
     inamorata_ability: str = Field(alias='field_26')
 
@@ -84,6 +86,6 @@ class Member(BaseModel):
 
     development_forum: str = Field(alias='field_31')
 
-    @field_validator('personal_computer', mode='after')
+    @field_validator('personal_computer', mode='before')
     def _validate_personal_computer(cls, v: str) -> list[Pokemon]:
         return Pokemon.parse_html(v)
