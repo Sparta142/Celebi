@@ -1,6 +1,13 @@
 from pathlib import Path
 
-from celebi.astonish.models import Member, Pokemon
+from celebi.astonish.models import (
+    BloodType,
+    ContactMethod,
+    MatureContent,
+    Member,
+    Pokemon,
+    Proficiency,
+)
 
 _DIRECTORY = Path(__file__).parent
 
@@ -94,6 +101,7 @@ class TestMember:
     def test_parse_member(self):
         member = Member.model_validate(
             {
+                'id': 45,
                 'avatar': '0',
                 'photo': '0',
                 'title': '',
@@ -144,6 +152,8 @@ class TestMember:
         assert member.age == '31'
         assert member.date_of_birth == '5/11'
         assert member.gender_and_pronouns == 'Cisgender male (he/him)'
+        assert member.blood_type is BloodType.HEMITHEO
+        assert member.inamorata_status is False
         assert member.orientation == 'Bisexual'
         assert member.marital_status == 'Single'
         assert member.height == '6\'0"'
@@ -152,6 +162,9 @@ class TestMember:
         assert member.face_claim == 'GRANBLUE FANTASY, aglovale'
         assert member.art_credits == ''
         assert member.player_pronouns == 'she/her'
+        assert member.player_timezone == -6
+        assert member.preferred_contact_method is ContactMethod.TAGS_OR_DMS
+        assert member.mature_content is MatureContent.YES
         assert member.flavour_text == 'the lights stretch out their form while the dim continue to fade on'  # fmt: skip
         assert len(member.biography) == 9041
         assert member.plot_page == 'https://astonish.jcink.net/index.php?showtopic=55'  # fmt: skip
@@ -164,4 +177,10 @@ class TestMember:
             Pokemon(id=431, name='Glameow'),
         ]
         assert member.inamorata_ability == ''
+        assert member.proficiency_1 is Proficiency.AURA
+        assert member.proficiency_2 is Proficiency.INSIGHT
+        assert member.proficiency_3 is Proficiency.NONE
+        assert member.proficiency_4 is Proficiency.NONE
         assert member.development_forum == 'https://astonish.jcink.net/index.php?showforum=82'  # fmt: skip
+
+        assert member.proficiencies == [Proficiency.AURA, Proficiency.INSIGHT]

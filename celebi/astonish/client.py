@@ -88,8 +88,7 @@ class AstonishClient:
         self.browser.form.set_all_readonly(True)  # For safety
 
         data = dict(self.browser.form._pairs())
-
-        return Member.model_validate(data)
+        return Member.model_validate({'id': memberid, **data})
 
     def edit_user_url(self, memberid: int) -> URL:
         return self.index_url.with_query(
