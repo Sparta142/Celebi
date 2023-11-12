@@ -11,6 +11,20 @@ LANGUAGE = 'en'
 
 logger = logging.getLogger(__name__)
 
+POKEMON_COLORS = {
+    'red': discord.Color(0xF0476B),
+    'blue': discord.Color(0x3F8CEC),
+    'yellow': discord.Color(0xF1D261),
+    'green': discord.Color(0x3FBD71),
+    'black': discord.Color(0x595959),
+    'brown': discord.Color(0xB16D3B),
+    'purple': discord.Color(0xAB65BE),
+    'gray': discord.Color(0xA2A2A2),
+    'white': discord.Color(0xF3F3F3),
+    'pink': discord.Color(0xFB8BC8),
+}
+"""Maps Pokemon color names to their respective Pokedex color."""
+
 
 async def pokemon(
     pkmn: aiopoke.Pokemon,
@@ -47,11 +61,18 @@ async def pokemon(
     # Build a URL to search for the Pokemon's wiki page
     url = URL('https://bulbapedia.bulbagarden.net') % {'search': name}
 
+    try:
+        color = POKEMON_COLORS[species.color.name]
+    except KeyError:
+        logger.warning('Missing mapped color: %r', species.name)
+        color = None
+
     # Build the actual Discord embed
     embed = discord.Embed(
         title=pokemon_utils.display_name(name, shiny),
         description=f'**No. {pkmn.id}**\n{flavor_text}',
         url=url,
+        color=color,
     )
 
     # Add localized type names for this Pokemon
