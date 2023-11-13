@@ -182,5 +182,6 @@ class TestMember:
         assert member.proficiency_3 is Proficiency.NONE
         assert member.proficiency_4 is Proficiency.NONE
         assert member.development_forum == 'https://astonish.jcink.net/index.php?showforum=82'  # fmt: skip
+        assert member.discord_id is None
 
         assert member.proficiencies == [Proficiency.AURA, Proficiency.INSIGHT]

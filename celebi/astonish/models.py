@@ -1,15 +1,19 @@
+import warnings
 from enum import Enum
-from typing import Annotated, Self
+from functools import cached_property
+from typing import Annotated, Any, Self
 
-from bs4 import BeautifulSoup, Tag
+from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning, Tag
 from pydantic import (
     BaseModel,
     BeforeValidator,
     Field,
+    GetCoreSchemaHandler,
     PlainSerializer,
     StrictInt,
     field_validator,
 )
+from pydantic_core import CoreSchema, core_schema
 from yarl import URL
 
 
@@ -144,48 +148,70 @@ class Proficiency(Enum):
         }[self]
 
 
+class Html(str):
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls,
+        source_type: Any,
+        handler: GetCoreSchemaHandler,
+    ) -> CoreSchema:
+        return core_schema.no_info_after_validator_function(cls, handler(str))
+
+    @cached_property
+    def plain_text(self) -> str:
+        with warnings.catch_warnings(
+            action='ignore',
+            category=MarkupResemblesLocatorWarning,
+        ):
+            return BeautifulSoup(self, 'lxml').text
+
+
 class Member(BaseModel):
     id: StrictInt
-    title: str
-    website: str
-    location: str
-    interests: str
-    signature: str
-    full_name: str = Field(alias='field_1')
-    nicknames: str = Field(alias='field_2')
-    age: str = Field(alias='field_3')
-    date_of_birth: str = Field(alias='field_4')
-    gender_and_pronouns: str = Field(alias='field_5')
+    title: Html
+    website: Html
+    location: Html
+    interests: Html
+    signature: Html
+    full_name: Html = Field(alias='field_1')
+    nicknames: Html = Field(alias='field_2')
+    age: Html = Field(alias='field_3')
+    date_of_birth: Html = Field(alias='field_4')
+    gender_and_pronouns: Html = Field(alias='field_5')
     blood_type: BloodType = Field(alias='field_6')
     inamorata_status: InamorataStatus = Field(alias='field_7')
-    orientation: str = Field(alias='field_8')
-    marital_status: str = Field(alias='field_9')
-    height: str = Field(alias='field_10')
-    occupation: str = Field(alias='field_11')
-    home_region: str = Field(alias='field_12')
-    face_claim: str = Field(alias='field_13')
-    art_credits: str = Field(alias='field_14')
-    flavour_text: str = Field(alias='field_15')
-    biography: str = Field(alias='field_16')
-    plot_page: str = Field(alias='field_17')
-    player_name: str = Field(alias='field_18')
-    player_pronouns: str = Field(alias='field_19')
+    orientation: Html = Field(alias='field_8')
+    marital_status: Html = Field(alias='field_9')
+    height: Html = Field(alias='field_10')
+    occupation: Html = Field(alias='field_11')
+    home_region: Html = Field(alias='field_12')
+    face_claim: Html = Field(alias='field_13')
+    art_credits: Html = Field(alias='field_14')
+    flavour_text: Html = Field(alias='field_15')
+    biography: Html = Field(alias='field_16')
+    plot_page: Html = Field(alias='field_17')
+    player_name: Html = Field(alias='field_18')
+    player_pronouns: Html = Field(alias='field_19')
     player_timezone: TimeZoneOffset = Field(alias='field_20')
     preferred_contact_method: ContactMethod = Field(alias='field_21')
     mature_content: MatureContent = Field(alias='field_22')
-    hover_image: str = Field(alias='field_23')
-    triggers_and_warnings: str = Field(alias='field_24')
-    personal_computer: list[Pokemon] = Field(alias='field_25')
-    inamorata_ability: str = Field(alias='field_26')
+    hover_image: Html = Field(alias='field_23')
+    triggers_and_warnings: Html = Field(alias='field_24')
+    personal_computer: Annotated[
+        list[Pokemon],
+        BeforeValidator(Pokemon.parse_html),
+    ] = Field(alias='field_25')
+    inamorata_ability: Html = Field(alias='field_26')
     proficiency_1: Proficiency = Field(alias='field_27')
     proficiency_2: Proficiency = Field(alias='field_28')
     proficiency_3: Proficiency = Field(alias='field_29')
     proficiency_4: Proficiency = Field(alias='field_30')
-    development_forum: str = Field(alias='field_31')
+    development_forum: Html = Field(alias='field_31')
+    discord_id: int | None = Field(alias='field_32', default=None)
 
-    @field_validator('personal_computer', mode='before')
-    def _validate_personal_computer(cls, v: str) -> list[Pokemon]:
-        return Pokemon.parse_html(v)
+    @field_validator('discord_id', mode='before')
+    def _validate_discord_id(cls, v: str) -> int | None:
+        return int(v) if v else None
 
     @property
     def profile_url(self) -> str:
