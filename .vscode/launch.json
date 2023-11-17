@@ -5,7 +5,7 @@
       "name": "Celebi",
       "type": "python",
       "request": "launch",
-      "module": "celebi.client"
+      "module": "celebi"
     }
   ]
 }
