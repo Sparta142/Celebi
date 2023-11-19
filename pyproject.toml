@@ -12,21 +12,25 @@ readme = "README.md"
 repository = "https://github.com/Sparta142/Celebi"
 
 [tool.poetry.dependencies]
-"discord.py" = { version = "^2.3", extras = ["speed"] }
-aiohttp = { url = "https://github.com/aio-libs/aiohttp/releases/download/v3.9.0b1/aiohttp-3.9.0b1.tar.gz" }
+aiohttp = { version = "^3.9.0", extras = ["speedups"] }
 aiopokeapi = "^0.1.7"
 backoff = "^2.2.1"
 beautifulsoup4 = "^4.12.2"
+"discord.py" = { version = "^2.3", extras = ["speed"] }
 lxml = "^4.9.3"
-mechanize = "^0.4.9"
-python = "^3.12"
-yarl = "^1.9.2"
 pydantic = "^2.4.2"
+python = "^3.12"
+ruamel-yaml = "^0.18.5"
+yarl = "^1.9.2"
 
 [tool.poetry.group.dev.dependencies]
+ipykernel = "^6.26.0"
+mypy = "^1.7.0"
+pytest = "^7.4.3"
 python-dotenv = "^1.0.0"
 ruff = "^0.1.4"
-pytest = "^7.4.3"
+types-beautifulsoup4 = "^4.12.0.7"
+types-lxml = "^2023.10.21"
 
 [tool.ruff]
 line-length = 80
@@ -36,3 +40,6 @@ indent-style = "space"
 quote-style = "single"
 line-ending = "lf"
 skip-magic-trailing-comma = false
+
+[tool.pytest.ini_options]
+filterwarnings = ["ignore:'audioop':DeprecationWarning:discord"]

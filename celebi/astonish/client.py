@@ -1,99 +1,267 @@
-from functools import cached_property
-from typing import Self
+import asyncio
+import inspect
+import json
+import re
+from typing import TYPE_CHECKING, Any, Self
 
+import aiohttp
 import backoff
-import mechanize
-from backoff.types import Details
-from mechanize._mechanize import FormNotFoundError
-from mechanize._response import seek_wrapper
+from bs4 import BeautifulSoup, SoupStrainer, Tag
 from yarl import URL
 
-from celebi.astonish.models import Member
+from celebi.astonish.models import (
+    Character,
+    ElementNotFoundError,
+    FullCharacter,
+    Inventory,
+    ItemStack,
+    Profile,
+)
+from celebi.utils import parse_form
+
+if TYPE_CHECKING:
+    from aiohttp.typedefs import StrOrURL
+    from backoff.types import Details
+    from pydantic import JsonValue
+
+    from celebi._types import Soupable
+
+__all__ = ['AstonishClient']
+
+
+class LoginFailedError(Exception):
+    """Indicates a failure to successfully login to the forum."""
 
 
 class AstonishClient:
-    """
-    Incomplete wrapper around moderation functions for
-    Jcink Forum Hosting communities.
-    """
+    """Incomplete wrapper around managing the ASTONISH Jcink forum."""
 
     base_url = URL('https://astonish.jcink.net')
 
     def __init__(self, username: str, password: str) -> None:
         self.username = username
         self.password = password
-        self.browser = mechanize.Browser()
 
-    @cached_property
-    def index_url(self) -> URL:
-        """The URL of the index page."""
-        return self.base_url.with_path('index.php')
+        # Initialized in __aenter__ where we have a running event loop
+        self.session: aiohttp.ClientSession
 
-    @cached_property
-    def login_url(self) -> URL:
-        """The URL of the login form page."""
-        return self.index_url.with_query(act='Login')
-
-    def __enter__(self) -> Self:
-        self.login()
+    async def __aenter__(self) -> Self:
+        self.session = aiohttp.ClientSession(self.base_url)
+        await self.login()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
-        self.browser.close()
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        await self.close()
 
-    def login(self, *, remember_me: bool = True, privacy: bool = True) -> None:
-        """
-        Authenticate with the forum.
+    async def close(self) -> None:
+        await self.session.close()
 
-        :param remember_me: Whether to log in with a long-lasting session
-        :param privacy: Whether to be shown in the "online members" list
-        """
+    async def login(self) -> None:
+        """Authenticate with the forum."""
 
-        # Open the virtual browser to the login page
-        self.browser.open(str(self.login_url))
+        data = {
+            'referer': '',
+            'UserName': self.username,
+            'PassWord': self.password,
+            'CookieDate': 1,  # "Remember me"
+            'Privacy': 1,  # "Don't add me to the active users list"
+        }
 
-        # "Focus" the login form
-        self.browser.select_form(name='LOGIN', method='post')
-        assert isinstance(self.browser.form, mechanize.HTMLForm)
+        # The client session will store the necessary session cookies
+        async with self.session.post(
+            '/index.php',
+            params={'act': 'Login', 'CODE': '01'},
+            data=data,
+        ) as response:
+            response.raise_for_status()
 
-        # Fill in the login details
-        self.browser.form['UserName'] = self.username
-        self.browser.form['PassWord'] = self.password
-        self.browser.form['CookieDate'] = ['1'] if remember_me else ['0']
-        self.browser.form['Privacy'] = ['1'] if privacy else []
+    async def get_full_character(self, memberid: int) -> FullCharacter:
+        # Fetch the character and profile data concurrently
+        async with asyncio.TaskGroup() as tg:
+            chara_task = tg.create_task(self.get_character(memberid))
+            profile_task = tg.create_task(self.get_profile(memberid))
 
-        # Perform the login (storing the session cookie automatically)
-        result = self.browser.submit()
-        if isinstance(result, seek_wrapper):
-            result.close()
+        chara = await chara_task
+        chara.id = memberid
 
+        return FullCharacter.combine(chara, await profile_task)
+
+    async def get_character(self, memberid: int) -> Character:
+        data = await self._get_modcp_fields(memberid)
+        assert data['id'] == memberid, 'Member ID does not match'
+
+        return Character.model_validate(data, from_attributes=False)
+
+    async def get_profile(self, memberid: int) -> Profile:
+        markup = await self.get(params={'showuser': memberid})
+        return Profile.parse_html(markup)
+
+    async def get_inventory(self, memberid: int) -> Inventory:
+        params = {
+            'act': 'store',
+            'code': 'view_inventory',
+            'memberid': memberid,
+        }
+
+        async with self.session.get('/index.php', params=params) as response:
+            response.raise_for_status()
+            text = await response.text()
+
+        soup = BeautifulSoup(text, 'lxml')
+
+        # Get the inventory owner
+        owner = soup.select_one(
+            '#ucpcontent > table tr:nth-child(1) > td:nth-child(2) > a'
+        )
+        if not owner:
+            raise ValueError('Inventory owner not found')
+
+        # Get all items
+        items: list[ItemStack] = []
+        trs = soup.select('#ucpcontent > table tr')[3:]
+
+        if trs[0].text.strip() != 'Inventory Empty.':
+            for tr in trs:
+                tds = tr.find_all('td', recursive=False)
+                items.append(
+                    ItemStack(
+                        icon_url=tds[0].find('img')['src'],
+                        name=tds[1].text,
+                        description=tds[2].text,
+                        stock=tds[3].text,
+                    )
+                )
+
+        return Inventory(owner=owner.text, items=items)
+
+    async def fetch_extra_data(self, memberid: int) -> 'JsonValue':
+        fields = await self._get_modcp_fields(memberid)
+
+        if raw_data := fields['field_32']:
+            return json.loads(raw_data)
+
+        return None
+
+    async def _get_modcp_fields(self, memberid: int) -> dict[str, Any]:
+        markup = await self.get(
+            login=True,
+            params={
+                'act': 'modcp',
+                'CODE': 'doedituser',
+                'memberid': memberid,
+            },
+        )
+        return self._parse_modcp_fields(markup)
+
+    @inspect.markcoroutinefunction  # @staticmethod is not recognized as async
     @staticmethod
-    def handle_form_not_found(details: 'Details'):
-        inst: AstonishClient = details['args'][0]
-        inst.login()
+    async def _handle_not_logged_in(details: 'Details') -> None:
+        self: AstonishClient = details['args'][0]
+        await self.login()
 
     @backoff.on_exception(
         backoff.constant,
-        (mechanize.FormNotFoundError, FormNotFoundError),
-        interval=0,
-        max_tries=2,
-        on_backoff=handle_form_not_found,
+        LoginFailedError,
+        interval=0,  # Retry immediately
+        max_tries=2,  # Retry once (the try + the retry = 2 tries)
+        on_backoff=_handle_not_logged_in,
     )
-    def member_details(self, memberid: int) -> Member:
-        url = self.edit_user_url(memberid)
-        self.browser.open(str(url))
+    async def get(
+        self,
+        url: 'StrOrURL' = '/index.php',
+        *,
+        login: bool = True,
+        **kwargs,
+    ) -> str:
+        if login and not self._has_session_cookies():
+            await self.login()
 
-        self.browser.select_form(name='ibform', method='post')
-        assert isinstance(self.browser.form, mechanize.HTMLForm)
-        self.browser.form.set_all_readonly(True)  # For safety
+        async with self.session.get(url, **kwargs) as response:
+            response.raise_for_status()
+            markup = await response.text()
 
-        data = dict(self.browser.form._pairs())
-        return Member.model_validate({'id': memberid, **data})
+        if login and not self._is_logged_in(markup):
+            raise LoginFailedError('Session cookies set but not logged in')
 
-    def edit_user_url(self, memberid: int) -> URL:
-        return self.index_url.with_query(
-            act='modcp',
-            f=0,
-            CODE='doedituser',
-            memberid=memberid,
+        return markup
+
+    def _has_session_cookies(self) -> bool:
+        cookies = self.session.cookie_jar.filter_cookies(self.base_url)
+        return ('session_id' in cookies) and ('pass_hash' in cookies)
+
+    @staticmethod
+    def _is_logged_in(markup: 'Soupable', /) -> bool:
+        soup = BeautifulSoup(
+            markup,
+            'lxml',
+            parse_only=SoupStrainer(['ul', 'li']),
         )
+
+        a = soup.select_one(
+            '#mobile-menu-activate > li[title="user profile"] > a[href*="showuser="]'
+        )
+        if not isinstance(a, Tag):
+            raise ElementNotFoundError('<a href="...">')
+
+        match a['href']:
+            case [str(href), *_]:
+                url = URL(href)
+            case str(href):
+                url = URL(href)
+            case _:
+                raise AssertionError()
+
+        # If the showuser param is not 0, it (probably) refers
+        # to the member ID of the currently logged-in user.
+        return url.query.get('showuser') != '0'
+
+    @classmethod
+    def _parse_modcp_fields(cls, markup: 'Soupable', /) -> dict[str, Any]:
+        def _match_form_action(action: str) -> bool:
+            url = URL(action)
+            return (
+                url.origin() == cls.base_url.origin()
+                and url.path == '/index.php'
+                and url.query.get('act') == 'modcp'
+                and url.query.get('CODE') == 'compedit'
+                and 'memberid' in url.query
+            )
+
+        soup = BeautifulSoup(
+            markup,
+            'lxml',
+            parse_only=SoupStrainer(['div', 'form']),
+        )
+
+        # Find the div containing the username
+        pattern = re.compile(r'^Edit a users profile: (?P<username>.+)$', re.I)
+
+        maintitle = soup.find('div', class_='maintitle', string=pattern)
+        if not isinstance(maintitle, Tag):
+            raise ElementNotFoundError('<div class="maintitle">')
+
+        # Parse out the username with a regex (it should always match)
+        match = pattern.fullmatch(maintitle.text)
+        assert match is not None, "BeautifulSoup matched but re didn't"
+
+        # Find the "Edit a users profile" form so that we can take its fields
+        ibform = soup.find(
+            'form',
+            attrs={
+                'name': 'ibform',
+                'method': 'post',
+                'action': _match_form_action,
+            },
+        )
+        if not isinstance(ibform, Tag):
+            raise ElementNotFoundError('<form name="ibform"...>')
+
+        # Parse the member ID out of the form action URL
+        action = URL(ibform.attrs['action'])
+        memberid = int(action.query['memberid'])
+
+        return {
+            'username': match.group('username'),
+            'id': memberid,
+            **parse_form(ibform),
+        }

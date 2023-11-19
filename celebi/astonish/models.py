@@ -1,20 +1,38 @@
-import warnings
-from enum import Enum
+from enum import Enum, StrEnum
 from functools import cached_property
-from typing import Annotated, Any, Self
+from typing import TYPE_CHECKING, Annotated, Any, Literal, Self
 
-from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning, Tag
+import discord
+import lxml.etree
+import lxml.html
+from bs4 import BeautifulSoup, SoupStrainer, Tag
+from pydantic import BaseModel as _BaseModel
 from pydantic import (
-    BaseModel,
     BeforeValidator,
+    ConfigDict,
     Field,
     GetCoreSchemaHandler,
+    HttpUrl,
+    Json,
     PlainSerializer,
-    StrictInt,
+    PositiveInt,
+    StrictStr,
+    ValidatorFunctionWrapHandler,
     field_validator,
 )
 from pydantic_core import CoreSchema, core_schema
 from yarl import URL
+
+if TYPE_CHECKING:
+    from celebi._types import Soupable
+
+
+class ElementNotFoundError(Exception):
+    pass
+
+
+class BaseModel(_BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
 
 
 class Pokemon(BaseModel):
@@ -31,11 +49,20 @@ class Pokemon(BaseModel):
         )
 
     @classmethod
-    def parse_html(cls, html: str) -> list[Self]:
-        soup = BeautifulSoup(html, 'lxml')
+    def parse_all_html(cls, markup: 'Soupable') -> list[Self]:
+        return cls.parse_all_tag(
+            BeautifulSoup(
+                markup,
+                'lxml',
+                parse_only=SoupStrainer(['div', 'img']),
+            )
+        )
+
+    @classmethod
+    def parse_all_tag(cls, tag: Tag) -> list[Self]:
         results = []
 
-        for parent in soup.find_all('div', class_='pkmn-display'):
+        for parent in tag.find_all('div', class_='pkmn-display'):
             assert isinstance(parent, Tag)
 
             # Find <div class="pkmn-name">
@@ -52,12 +79,18 @@ class Pokemon(BaseModel):
             results.append(
                 cls(
                     id=int(stem),
-                    name=name.text.strip(),
+                    name=name.text,
                     shiny='shiny' in parent.attrs['class'],
                 )
             )
 
         return results
+
+
+PersonalComputer = Annotated[
+    list[Pokemon],
+    BeforeValidator(Pokemon.parse_all_html),
+]
 
 
 class BloodType(Enum):
@@ -86,7 +119,7 @@ TimeZoneOffset = Annotated[
 ]
 
 
-class ContactMethod(Enum):
+class ContactMethod(StrEnum):
     TAGS = 'tag'
     MESSAGES = 'dms'
     TAGS_OR_DMS = 'tdm'
@@ -100,7 +133,7 @@ class ContactMethod(Enum):
         }[self]
 
 
-class MatureContent(Enum):
+class MatureContent(StrEnum):
     YES = 'y'
     NO = 'n'
     ASK = 'a'
@@ -114,7 +147,7 @@ class MatureContent(Enum):
         }[self]
 
 
-class Proficiency(Enum):
+class Proficiency(StrEnum):
     NONE = 'n'
     COMBAT = 'c'
     SURVIVAL = 's'
@@ -148,26 +181,54 @@ class Proficiency(Enum):
         }[self]
 
 
+class TrainerClass(StrEnum):
+    APHIDOIDEA = 'aphidoidea'
+    KRISIGOS = 'krisigos'
+    MNEMNTIA = 'mnemntia'
+    SOPHIST = 'sophist'
+    STRATEGOS = 'strategos'
+    THIARCHOS = 'thiarchos'
+    VALIDATING = 'validating'
+    """Pseudo trainer class for not-yet-accepted characters. """
+
+    def __str__(self) -> str:
+        return self.value.title()
+
+    @property
+    def color(self) -> int | None:
+        cls = type(self)
+        return {
+            cls.APHIDOIDEA: 0x266C54,
+            cls.KRISIGOS: 0x657925,
+            cls.MNEMNTIA: 0x2E6F7F,
+            cls.SOPHIST: 0x8E681E,
+            cls.STRATEGOS: 0xB36B42,
+            cls.THIARCHOS: 0x8A56A4,
+        }.get(self)
+
+
 class Html(str):
     @classmethod
     def __get_pydantic_core_schema__(
         cls,
-        source_type: Any,
+        source_type,
         handler: GetCoreSchemaHandler,
     ) -> CoreSchema:
         return core_schema.no_info_after_validator_function(cls, handler(str))
 
     @cached_property
     def plain_text(self) -> str:
-        with warnings.catch_warnings(
-            action='ignore',
-            category=MarkupResemblesLocatorWarning,
-        ):
-            return BeautifulSoup(self, 'lxml').text
+        if self:
+            element = lxml.html.fromstring(self)
+            return element.text or ''
+
+        return ''
 
 
-class Member(BaseModel):
-    id: StrictInt
+class Character(BaseModel):
+    username: StrictStr = Field(exclude=True)
+    id: PositiveInt = Field(strict=True, exclude=True)
+
     title: Html
     website: Html
     location: Html
@@ -197,21 +258,24 @@ class Member(BaseModel):
     mature_content: MatureContent = Field(alias='field_22')
     hover_image: Html = Field(alias='field_23')
     triggers_and_warnings: Html = Field(alias='field_24')
-    personal_computer: Annotated[
-        list[Pokemon],
-        BeforeValidator(Pokemon.parse_html),
-    ] = Field(alias='field_25')
+    personal_computer: PersonalComputer = Field(alias='field_25')
     inamorata_ability: Html = Field(alias='field_26')
     proficiency_1: Proficiency = Field(alias='field_27')
     proficiency_2: Proficiency = Field(alias='field_28')
     proficiency_3: Proficiency = Field(alias='field_29')
     proficiency_4: Proficiency = Field(alias='field_30')
     development_forum: Html = Field(alias='field_31')
-    discord_id: int | None = Field(alias='field_32', default=None)
+    extra: Json['ExtraData'] | None = Field(alias='field_32')
 
-    @field_validator('discord_id', mode='before')
-    def _validate_discord_id(cls, v: str) -> int | None:
-        return int(v) if v else None
+    @field_validator('extra', mode='wrap')
+    @classmethod
+    def _validate_extra(
+        cls,
+        v: Any,
+        handler: ValidatorFunctionWrapHandler,
+        info,
+    ):
+        return None if v == '' else handler(v)
 
     @property
     def profile_url(self) -> str:
@@ -226,3 +290,86 @@ class Member(BaseModel):
             self.proficiency_4,
         ]
         return [p for p in candidates if p != Proficiency.NONE]
+
+
+class ItemStack(BaseModel):
+    """Represents a single stack of items owned by a character."""
+
+    icon_url: HttpUrl
+    name: StrictStr
+    description: StrictStr
+    stock: PositiveInt
+
+
+class Inventory(BaseModel):
+    """Represents a character name and all items that character owns."""
+
+    owner: StrictStr
+    items: list[ItemStack] = Field(default_factory=list, max_length=10)
+
+    def __iter__(self):
+        yield from self.items
+
+
+class Profile(BaseModel):
+    """Represents a character profile as viewed by the public."""
+
+    character_name: StrictStr
+    group: StrictStr
+
+    @classmethod
+    def parse_html(
+        cls,
+        markup: 'Soupable',
+    ) -> Self:
+        soup = BeautifulSoup(
+            markup,
+            'lxml',
+            parse_only=SoupStrainer(['h3', 'li', 'span']),
+        )
+
+        # Find the element containing the character name
+        character_name = soup.find('h3', id='character-name')
+        if not character_name:
+            raise ElementNotFoundError('h3#character-name')
+
+        group_field = soup.find('li', id='main-profile-trainer-class')
+        if not isinstance(group_field, Tag):
+            raise ElementNotFoundError('li#main-profile-trainer-class')
+
+        group = group_field.find('span', class_='description')
+        if not group:
+            raise ElementNotFoundError(
+                'span#main-profile-trainer-class.description'
+            )
+
+        return cls(
+            character_name=character_name.text,
+            group=group.text,
+        )
+
+    def trainer_class(self) -> TrainerClass:
+        return TrainerClass(self.group)
+
+
+class FullCharacter(Character, Profile):
+    @classmethod
+    def combine(cls, character: Character, profile: Profile) -> Self:
+        return cls.model_construct(**dict(character), **dict(profile))
+
+
+class ExtraDataV1(BaseModel):
+    version: Literal[1]
+    discord_id: Annotated[
+        discord.Object,
+        BeforeValidator(discord.Object),
+        PlainSerializer(lambda obj: obj.id, return_type=int),
+    ]
+
+    model_config = {'arbitrary_types_allowed': True}
+
+
+ExtraData = Annotated[
+    ExtraDataV1,
+    Field(discriminator='version'),
+]
