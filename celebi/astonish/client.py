@@ -29,6 +29,10 @@ class LoginFailedError(Exception):
     """Indicates a failure to successfully login to the forum."""
 
 
+class CharacterLookupError(LookupError):
+    """Indicates that the requested character was not found."""
+
+
 class AstonishClient:
     """Incomplete wrapper around managing the ASTONISH Jcink forum."""
 
@@ -72,10 +76,14 @@ class AstonishClient:
             response.raise_for_status()
 
     async def get_character(self, memberid: int) -> Character:
-        # Fetch the Mod CP data and profile data concurrently
-        async with asyncio.TaskGroup() as tg:
-            fields_task = tg.create_task(self._get_modcp_fields(memberid))
-            group_task = tg.create_task(self.get_character_group(memberid))
+        try:
+            # Fetch the Mod CP data and profile data concurrently
+            async with asyncio.TaskGroup() as tg:
+                fields_task = tg.create_task(self._get_modcp_fields(memberid))
+                group_task = tg.create_task(self.get_character_group(memberid))
+        except* ElementNotFoundError as e:
+            # This is *probably* because the character doesn't exist
+            raise CharacterLookupError(memberid) from e
 
         fields = await fields_task
         fields['group'] = await group_task
