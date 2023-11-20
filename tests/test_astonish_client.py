@@ -72,6 +72,23 @@ def test_parse_modcp_fields():
         'profile_thiarchos.html',
     ],
 )
-def test_is_logged_in(filename):
+def test_is_logged_in(filename: str):
     with open(DATA_DIRECTORY / filename, 'rb') as f:
         assert AstonishClient._is_logged_in(f)
+
+
+@pytest.mark.parametrize(
+    ('filename', 'group'),
+    [
+        ('profile_admin.html', 'Admin'),
+        ('profile_aphidoidea.html', 'aphidoidea'),
+        ('profile_krisigos.html', 'krisigos'),
+        ('profile_mnemntia.html', 'mnemntia'),
+        ('profile_mod.html', 'Mod'),
+        ('profile_sophist.html', 'sophist'),
+        ('profile_thiarchos.html', 'thiarchos'),
+    ],
+)
+def test_parse_character_group(filename: str, group: str):
+    with open(DATA_DIRECTORY / filename, 'rb') as f:
+        assert AstonishClient._parse_character_group(f) == group

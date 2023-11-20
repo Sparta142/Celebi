@@ -1,6 +1,5 @@
 import asyncio
 import inspect
-import json
 import re
 from typing import TYPE_CHECKING, Any, Self
 
@@ -12,17 +11,14 @@ from yarl import URL
 from celebi.astonish.models import (
     Character,
     ElementNotFoundError,
-    FullCharacter,
     Inventory,
     ItemStack,
-    Profile,
 )
 from celebi.utils import parse_form
 
 if TYPE_CHECKING:
     from aiohttp.typedefs import StrOrURL
     from backoff.types import Details
-    from pydantic import JsonValue
 
     from celebi._types import Soupable
 
@@ -75,26 +71,22 @@ class AstonishClient:
         ) as response:
             response.raise_for_status()
 
-    async def get_full_character(self, memberid: int) -> FullCharacter:
-        # Fetch the character and profile data concurrently
-        async with asyncio.TaskGroup() as tg:
-            chara_task = tg.create_task(self.get_character(memberid))
-            profile_task = tg.create_task(self.get_profile(memberid))
-
-        chara = await chara_task
-        chara.id = memberid
-
-        return FullCharacter.combine(chara, await profile_task)
-
     async def get_character(self, memberid: int) -> Character:
-        data = await self._get_modcp_fields(memberid)
-        assert data['id'] == memberid, 'Member ID does not match'
+        # Fetch the Mod CP data and profile data concurrently
+        async with asyncio.TaskGroup() as tg:
+            fields_task = tg.create_task(self._get_modcp_fields(memberid))
+            group_task = tg.create_task(self.get_character_group(memberid))
 
-        return Character.model_validate(data, from_attributes=False)
+        fields = await fields_task
+        fields['group'] = await group_task
 
-    async def get_profile(self, memberid: int) -> Profile:
+        assert fields['id'] == memberid, 'Member ID does not match'
+
+        return Character.model_validate(fields, from_attributes=False)
+
+    async def get_character_group(self, memberid: int) -> str:
         markup = await self.get(params={'showuser': memberid})
-        return Profile.parse_html(markup)
+        return self._parse_character_group(markup)
 
     async def get_inventory(self, memberid: int) -> Inventory:
         params = {
@@ -133,14 +125,6 @@ class AstonishClient:
                 )
 
         return Inventory(owner=owner.text, items=items)
-
-    async def fetch_extra_data(self, memberid: int) -> 'JsonValue':
-        fields = await self._get_modcp_fields(memberid)
-
-        if raw_data := fields['field_32']:
-            return json.loads(raw_data)
-
-        return None
 
     async def _get_modcp_fields(self, memberid: int) -> dict[str, Any]:
         markup = await self.get(
@@ -265,3 +249,17 @@ class AstonishClient:
             'id': memberid,
             **parse_form(ibform),
         }
+
+    @staticmethod
+    def _parse_character_group(markup: 'Soupable', /) -> str:
+        soup = BeautifulSoup(
+            markup,
+            'lxml',
+            parse_only=SoupStrainer(['li', 'span']),
+        )
+
+        span = soup.select_one('#main-profile-trainer-class > span.description')
+        if not isinstance(span, Tag):
+            raise ElementNotFoundError('<span class="description">')
+
+        return span.text.strip()

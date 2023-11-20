@@ -227,6 +227,7 @@ class Html(str):
 
 class Character(BaseModel):
     username: StrictStr = Field(exclude=True)
+    group: StrictStr = Field(exclude=True)
     id: PositiveInt = Field(strict=True, exclude=True)
 
     title: Html
@@ -291,6 +292,17 @@ class Character(BaseModel):
         ]
         return [p for p in candidates if p != Proficiency.NONE]
 
+    @property
+    def restricted(self) -> bool:
+        """
+        Whether this character should *not* be shown in
+        Discord embeds or similar circumstances.
+        """
+        return self.group not in TrainerClass
+
+    def trainer_class(self) -> TrainerClass:
+        return TrainerClass(self.group)  # Might raise an exception
+
 
 class ItemStack(BaseModel):
     """Represents a single stack of items owned by a character."""
@@ -309,53 +321,6 @@ class Inventory(BaseModel):
 
     def __iter__(self):
         yield from self.items
-
-
-class Profile(BaseModel):
-    """Represents a character profile as viewed by the public."""
-
-    character_name: StrictStr
-    group: StrictStr
-
-    @classmethod
-    def parse_html(
-        cls,
-        markup: 'Soupable',
-    ) -> Self:
-        soup = BeautifulSoup(
-            markup,
-            'lxml',
-            parse_only=SoupStrainer(['h3', 'li', 'span']),
-        )
-
-        # Find the element containing the character name
-        character_name = soup.find('h3', id='character-name')
-        if not character_name:
-            raise ElementNotFoundError('h3#character-name')
-
-        group_field = soup.find('li', id='main-profile-trainer-class')
-        if not isinstance(group_field, Tag):
-            raise ElementNotFoundError('li#main-profile-trainer-class')
-
-        group = group_field.find('span', class_='description')
-        if not group:
-            raise ElementNotFoundError(
-                'span#main-profile-trainer-class.description'
-            )
-
-        return cls(
-            character_name=character_name.text,
-            group=group.text,
-        )
-
-    def trainer_class(self) -> TrainerClass:
-        return TrainerClass(self.group)
-
-
-class FullCharacter(Character, Profile):
-    @classmethod
-    def combine(cls, character: Character, profile: Profile) -> Self:
-        return cls.model_construct(**dict(character), **dict(profile))
 
 
 class ExtraDataV1(BaseModel):
