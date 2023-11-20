@@ -31,6 +31,15 @@ class ElementNotFoundError(Exception):
     pass
 
 
+class RestrictedCharacterError(Exception):
+    def __init__(self, username: str) -> None:
+        msg = (
+            f'The character {username!r} is restricted and '
+            'may not be displayed in a public context.'
+        )
+        super().__init__(msg)
+
+
 class BaseModel(_BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
@@ -302,6 +311,10 @@ class Character(BaseModel):
 
     def trainer_class(self) -> TrainerClass:
         return TrainerClass(self.group)  # Might raise an exception
+
+    def raise_if_restricted(self):
+        if self.restricted:
+            raise RestrictedCharacterError(self.username)
 
 
 class ItemStack(BaseModel):
