@@ -43,3 +43,6 @@ skip-magic-trailing-comma = false
 
 [tool.pytest.ini_options]
 filterwarnings = ["ignore:'audioop':DeprecationWarning:discord"]
+
+[tool.mypy]
+plugins = ["pydantic.mypy"]
