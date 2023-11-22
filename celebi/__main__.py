@@ -5,9 +5,8 @@ import discord.utils
 
 from celebi.client import client
 
-logger = logging.getLogger(__name__)
-
 # Set up logging before doing anything else
+logger = logging.getLogger(__name__)
 discord.utils.setup_logging()
 
 # Load environment variables from .env if python-dotenv is installed
