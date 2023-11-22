@@ -7,52 +7,52 @@ from . import DATA_DIRECTORY
 
 def test_parse_modcp_fields():
     with open(DATA_DIRECTORY / 'modcp_bryn_vaughn.html', 'rb') as f:
-        data = AstonishClient._parse_modcp_fields(f)
+        form, synthetic = AstonishClient._parse_modcp_fields(f.read())
 
     # "Synthetic" fields (not from form inputs, but from other page data)
-    assert data['username'] == 'Bryn Vaughn'
-    assert data['id'] == 45
+    assert synthetic['username'] == 'Bryn Vaughn'
+    assert synthetic['id'] == 45
 
     # Real form fields
-    assert data['avatar'] == '0'
-    assert data['photo'] == '0'
-    assert data['title'] == ''
-    assert data['website'] == 'http://'
-    assert data['location'] == ''
-    assert data['interests'] == ''
-    assert data['signature'] == ''
-    assert data['field_1'] == 'Bryn Vaughn'
-    assert data['field_2'] == 'n/a'
-    assert data['field_3'] == '31'
-    assert data['field_4'] == '5/11'
-    assert data['field_5'] == 'he/him'
-    assert data['field_6'] == 'he'
-    assert data['field_7'] == 'n'
-    assert data['field_8'] == 'Bisexual'
-    assert data['field_9'] == 'Single'
-    assert data['field_10'] == '6\'0"'
-    assert data['field_11'] == 'Aura Scientist'
-    assert data['field_12'] == 'Pyrinas, Lythra'
-    assert data['field_13'] == 'GRANBLUE FANTASY, aglovale'
-    assert data['field_14'] == ''
-    assert data['field_15'] == 'the lights stretch out their form while the dim continue to fade on'  # fmt: skip
+    assert form['avatar'] == '0'
+    assert form['photo'] == '0'
+    assert form['title'] == ''
+    assert form['website'] == 'http://'
+    assert form['location'] == ''
+    assert form['interests'] == ''
+    assert form['signature'] == ''
+    assert form['field_1'] == 'Bryn Vaughn'
+    assert form['field_2'] == 'n/a'
+    assert form['field_3'] == '31'
+    assert form['field_4'] == '5/11'
+    assert form['field_5'] == 'he/him'
+    assert form['field_6'] == 'he'
+    assert form['field_7'] == 'n'
+    assert form['field_8'] == 'Bisexual'
+    assert form['field_9'] == 'Single'
+    assert form['field_10'] == '6\'0"'
+    assert form['field_11'] == 'Aura Scientist'
+    assert form['field_12'] == 'Pyrinas, Lythra'
+    assert form['field_13'] == 'GRANBLUE FANTASY, aglovale'
+    assert form['field_14'] == ''
+    assert form['field_15'] == 'the lights stretch out their form while the dim continue to fade on'  # fmt: skip
     # TODO: field_16
-    assert data['field_17'] == 'https://astonish.jcink.net/index.php?showtopic=55'  # fmt: skip
-    assert data['field_18'] == 'habs'
-    assert data['field_19'] == 'she/her'
-    assert data['field_20'] == '-6'
-    assert data['field_21'] == 'tdm'
-    assert data['field_22'] == 'y'
-    assert data['field_23'] == 'https://i.postimg.cc/j29rFPTh/agg17.png'
-    assert data['field_24'] == 'n/a'
-    assert len(data['field_25']) == 660
-    assert data['field_26'] == ''
-    assert data['field_27'] == 'a'
-    assert data['field_28'] == 'ins'
-    assert data['field_29'] == 'n'
-    assert data['field_30'] == 'n'
-    assert data['field_31'] == 'https://astonish.jcink.net/index.php?showforum=82'  # fmt: skip
-    assert data['field_32'] == ''
+    assert form['field_17'] == 'https://astonish.jcink.net/index.php?showtopic=55'  # fmt: skip
+    assert form['field_18'] == 'habs'
+    assert form['field_19'] == 'she/her'
+    assert form['field_20'] == '-6'
+    assert form['field_21'] == 'tdm'
+    assert form['field_22'] == 'y'
+    assert form['field_23'] == 'https://i.postimg.cc/j29rFPTh/agg17.png'
+    assert form['field_24'] == 'n/a'
+    assert len(form['field_25']) == 660
+    assert form['field_26'] == ''
+    assert form['field_27'] == 'a'
+    assert form['field_28'] == 'ins'
+    assert form['field_29'] == 'n'
+    assert form['field_30'] == 'n'
+    assert form['field_31'] == 'https://astonish.jcink.net/index.php?showforum=82'  # fmt: skip
+    assert form['field_32'] == ''
 
 
 @pytest.mark.parametrize(
@@ -74,7 +74,7 @@ def test_parse_modcp_fields():
 )
 def test_is_logged_in(filename: str):
     with open(DATA_DIRECTORY / filename, 'rb') as f:
-        assert AstonishClient._is_logged_in(f)
+        assert AstonishClient._is_logged_in(f.read())
 
 
 @pytest.mark.parametrize(
@@ -91,4 +91,4 @@ def test_is_logged_in(filename: str):
 )
 def test_parse_character_group(filename: str, group: str):
     with open(DATA_DIRECTORY / filename, 'rb') as f:
-        assert AstonishClient._parse_character_group(f) == group
+        assert AstonishClient._parse_character_group(f.read()) == group

@@ -1,11 +1,13 @@
 from enum import Enum, StrEnum
 from functools import cached_property
-from typing import TYPE_CHECKING, Annotated, Any, Literal, Self
+from typing import TYPE_CHECKING, Annotated, Any, ClassVar, Literal, Self
 
+import aiopoke
 import discord
 import lxml.etree
 import lxml.html
 from bs4 import BeautifulSoup, SoupStrainer, Tag
+from lxml.html.builder import E
 from pydantic import BaseModel as _BaseModel
 from pydantic import (
     BeforeValidator,
@@ -40,6 +42,10 @@ class RestrictedCharacterError(Exception):
         super().__init__(msg)
 
 
+class UserMismatchError(Exception):
+    pass
+
+
 class BaseModel(_BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
@@ -48,13 +54,32 @@ class Pokemon(BaseModel):
     id: int = Field(gt=0)
     name: str
     shiny: bool = False
+    custom_sprite_url: HttpUrl | None = None
+
+    _pkmn_id_attr: ClassVar[str] = 'data-pkmn-id'
 
     @property
     def sprite_url(self) -> str:
+        if self.custom_sprite_url:
+            return str(self.custom_sprite_url)
+
         return (
             'https://raw.githubusercontent.com'
             '/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork'
             f'{"/shiny" if self.shiny else ""}/{self.id}.png'
+        )
+
+    @classmethod
+    def from_aiopoke(
+        cls,
+        pkmn: aiopoke.Pokemon,
+        *,
+        shiny: bool = False,
+    ) -> Self:
+        return cls(
+            id=pkmn.id,
+            name=pkmn.name.title(),  # XXX
+            shiny=shiny,
         )
 
     @classmethod
@@ -74,6 +99,11 @@ class Pokemon(BaseModel):
         for parent in tag.find_all('div', class_='pkmn-display'):
             assert isinstance(parent, Tag)
 
+            id = None
+
+            if parent.has_attr(cls._pkmn_id_attr):
+                id = int(parent.attrs[cls._pkmn_id_attr])
+
             # Find <div class="pkmn-name">
             name = parent.find('div', class_='pkmn-name', recursive=False)
             assert isinstance(name, Tag)
@@ -83,17 +113,34 @@ class Pokemon(BaseModel):
             assert isinstance(img, Tag)
 
             src = URL(img.attrs['src'])
-            stem = src.name.removesuffix(src.suffix)
+
+            if id is None:
+                id = int(src.name.removesuffix(src.suffix))
 
             results.append(
                 cls(
-                    id=int(stem),
+                    id=id,
                     name=name.text,
                     shiny='shiny' in parent.attrs['class'],
+                    custom_sprite_url=str(src),
                 )
             )
 
         return results
+
+    def model_dump_html(self) -> str:
+        element = E.div(
+            {'class': 'pkmn-display', self._pkmn_id_attr: str(self.id)},
+            E.i({'class': 'fa-solid fa-sparkles'}, ''),
+            E.div({'class': 'pkmn-name'}, self.name),
+            E.img({'src': self.sprite_url}),
+        )
+
+        return lxml.etree.tostring(
+            element,
+            encoding='unicode',
+            pretty_print=False,
+        )
 
 
 PersonalComputer = Annotated[
@@ -102,18 +149,27 @@ PersonalComputer = Annotated[
 ]
 
 
-class BloodType(Enum):
-    MORTAL = 'mo'
-    METIC = 'me'
-    HEMITHEO = 'he'
+class DescEnum(Enum):
+    def __new__(cls, *args, **kwargs):
+        obj = object.__new__(cls)
+        obj._value_ = args[0]
+        return obj
+
+    def __init__(self, _, description: str = '') -> None:
+        self.__description = description
 
     def __str__(self) -> str:
-        cls = type(self)
-        return {
-            cls.MORTAL: 'Mortal',
-            cls.METIC: 'Metic',
-            cls.HEMITHEO: 'Hemitheo',
-        }[self]
+        return self.description
+
+    @property
+    def description(self) -> str:
+        return self.__description
+
+
+class BloodType(DescEnum):
+    MORTAL = 'mo', 'Mortal'
+    METIC = 'me', 'Metic'
+    HEMITHEO = 'he', 'Hemitheo'
 
 
 InamorataStatus = Annotated[
@@ -128,66 +184,32 @@ TimeZoneOffset = Annotated[
 ]
 
 
-class ContactMethod(StrEnum):
-    TAGS = 'tag'
-    MESSAGES = 'dms'
-    TAGS_OR_DMS = 'tdm'
-
-    def __str__(self) -> str:
-        cls = type(self)
-        return {
-            cls.TAGS: 'Tags',
-            cls.MESSAGES: 'Messages',
-            cls.TAGS_OR_DMS: 'Tags or DMs',
-        }[self]
+class ContactMethod(DescEnum):
+    TAGS = 'tag', 'Tags'
+    MESSAGES = 'dms', 'Messages'
+    TAGS_OR_DMS = 'tdm', 'Tags or DMs'
 
 
-class MatureContent(StrEnum):
-    YES = 'y'
-    NO = 'n'
-    ASK = 'a'
-
-    def __str__(self) -> str:
-        cls = type(self)
-        return {
-            cls.YES: 'Yes',
-            cls.NO: 'No',
-            cls.ASK: 'Ask',
-        }[self]
+class MatureContent(DescEnum):
+    YES = 'y', 'Yes'
+    NO = 'n', 'No'
+    ASK = 'a', 'Ask'
 
 
-class Proficiency(StrEnum):
-    NONE = 'n'
-    COMBAT = 'c'
-    SURVIVAL = 's'
-    POKEMON_KNOWLEDGE = 'pk'
-    POKEMON_HANDLING = 'ph'
-    HISTORY = 'h'
-    AURA = 'a'
-    INSIGHT = 'ins'
-    INVESTIGATION = 'inv'
-    INTIMIDATION = 'int'
-    PERFORMANCE = 'perf'
-    STYLING = 'st'
-    PERSUASION = 'pers'
-
-    def __str__(self) -> str:
-        cls = type(self)
-        return {
-            cls.NONE: 'None',
-            cls.COMBAT: 'Combat',
-            cls.SURVIVAL: 'Survival',
-            cls.POKEMON_KNOWLEDGE: 'Pokémon Knowledge',
-            cls.POKEMON_HANDLING: 'Pokémon Handling',
-            cls.HISTORY: 'History',
-            cls.AURA: 'Aura',
-            cls.INSIGHT: 'Insight',
-            cls.INVESTIGATION: 'Investigation',
-            cls.INTIMIDATION: 'Intimidation',
-            cls.PERFORMANCE: 'Performance',
-            cls.STYLING: 'Styling',
-            cls.PERSUASION: 'Persuasion',
-        }[self]
+class Proficiency(DescEnum):
+    NONE = 'n', 'None'
+    COMBAT = 'c', 'Combat'
+    SURVIVAL = 's', 'Survival'
+    POKEMON_KNOWLEDGE = 'pk', 'Pokémon Knowledge'
+    POKEMON_HANDLING = 'ph', 'Pokémon Handling'
+    HISTORY = 'h', 'History'
+    AURA = 'a', 'Aura'
+    INSIGHT = 'ins', 'Insight'
+    INVESTIGATION = 'inv', 'Investigation'
+    INTIMIDATION = 'int', 'Intimidation'
+    PERFORMANCE = 'perf', 'Performance'
+    STYLING = 'st', 'Styling'
+    PERSUASION = 'pers', 'Persuasion'
 
 
 class TrainerClass(StrEnum):
@@ -229,7 +251,7 @@ class Html(str):
     def plain_text(self) -> str:
         if self:
             element = lxml.html.fromstring(self)
-            return element.text or ''
+            return element.text_content()
 
         return ''
 
@@ -266,7 +288,7 @@ class Character(BaseModel):
     player_timezone: TimeZoneOffset = Field(alias='field_20')
     preferred_contact_method: ContactMethod = Field(alias='field_21')
     mature_content: MatureContent = Field(alias='field_22')
-    hover_image: Html = Field(alias='field_23')
+    hover_image: HttpUrl = Field(alias='field_23')
     triggers_and_warnings: Html = Field(alias='field_24')
     personal_computer: PersonalComputer = Field(alias='field_25')
     inamorata_ability: Html = Field(alias='field_26')
@@ -275,7 +297,7 @@ class Character(BaseModel):
     proficiency_3: Proficiency = Field(alias='field_29')
     proficiency_4: Proficiency = Field(alias='field_30')
     development_forum: Html = Field(alias='field_31')
-    extra: Json['ExtraData'] | None = Field(alias='field_32')
+    extra: Json['ExtraData'] = Field(alias='field_32')
 
     @field_validator('extra', mode='wrap')
     @classmethod
@@ -285,7 +307,7 @@ class Character(BaseModel):
         handler: ValidatorFunctionWrapHandler,
         info,
     ):
-        return None if v == '' else handler(v)
+        return ExtraDataV1() if v == '' else handler(v)
 
     @property
     def profile_url(self) -> str:
@@ -307,14 +329,26 @@ class Character(BaseModel):
         Whether this character should *not* be shown in
         Discord embeds or similar circumstances.
         """
-        return self.group not in TrainerClass
+        return is_restricted_group(self.group)
 
     def trainer_class(self) -> TrainerClass:
         return TrainerClass(self.group)  # Might raise an exception
 
-    def raise_if_restricted(self):
+    def raise_if_restricted(self) -> None:
         if self.restricted:
             raise RestrictedCharacterError(self.username)
+
+    def raise_if_user_mismatch(
+        self,
+        user: discord.User | discord.Member,
+    ) -> None:
+        if self.extra.discord_id is None:
+            raise UserMismatchError('This character has no linked Discord user')
+        elif self.extra.discord_id != user.id:
+            raise UserMismatchError(
+                'The given Discord user does not match '
+                'the one linked to this character'
+            )
 
 
 class ItemStack(BaseModel):
@@ -337,12 +371,8 @@ class Inventory(BaseModel):
 
 
 class ExtraDataV1(BaseModel):
-    version: Literal[1]
-    discord_id: Annotated[
-        discord.Object,
-        BeforeValidator(discord.Object),
-        PlainSerializer(lambda obj: obj.id, return_type=int),
-    ]
+    version: Literal[1] = 1
+    discord_id: int | None = None
 
     model_config = {'arbitrary_types_allowed': True}
 
@@ -351,3 +381,98 @@ ExtraData = Annotated[
     ExtraDataV1,
     Field(discriminator='version'),
 ]
+
+
+class MemberCard(BaseModel):
+    id: int
+    username: str
+    flavour_text: str
+    group: str
+    age: str
+    gender_and_pronouns: str
+    occupation: str
+    face_claim: str
+    blood: str
+    inamorata: str
+    player_name: str
+
+    @classmethod
+    def parse_html(cls, element: lxml.html.HtmlElement) -> Self:
+        (a,) = element.cssselect('h1 > span > a[href]')
+        href = URL(a.attrib['href'])
+        (flavour_text,) = element.cssselect('.member-list-flavour-text')
+        (basics,) = element.cssselect('ul.member-list-member-basics')
+        (group,) = basics.cssselect('li.group:nth-child(1)')
+        (age,) = basics.cssselect('li:nth-child(2)')
+        (gender,) = basics.cssselect('li:nth-child(3)')
+        (occupation,) = basics.cssselect('li.occupation:nth-child(4)')
+        (face_claim,) = basics.cssselect('li.face-claim:nth-child(5)')
+        (blood,) = basics.cssselect('li.blood:nth-child(6)')
+        (inamorata,) = basics.cssselect('li.inamorata:nth-child(7)')
+        (player_name,) = element.cssselect('.member-list-played-by > b')
+
+        return cls(
+            id=int(href.query['showuser']),
+            username=a.text or '',
+            flavour_text=flavour_text.text or '',
+            group=group.text or '',
+            age=age.text or '',
+            gender_and_pronouns=gender.text or '',
+            occupation=occupation.text or '',
+            face_claim=face_claim.text or '',
+            blood=blood.text or '',
+            inamorata=inamorata.text or '',
+            player_name=player_name.text or '',
+        )
+
+    @property
+    def profile_url(self) -> str:
+        return f'https://astonish.jcink.net/index.php?showuser={self.id}'
+
+
+class ModCPFields(BaseModel):
+    title: Html
+    website: Html
+    location: Html
+    interests: Html
+    signature: Html
+    full_name: Html = Field(alias='field_1')
+    nicknames: Html = Field(alias='field_2')
+    age: Html = Field(alias='field_3')
+    date_of_birth: Html = Field(alias='field_4')
+    gender_and_pronouns: Html = Field(alias='field_5')
+    blood_type: BloodType = Field(alias='field_6')
+    inamorata_status: InamorataStatus = Field(alias='field_7')
+    orientation: Html = Field(alias='field_8')
+    marital_status: Html = Field(alias='field_9')
+    height: Html = Field(alias='field_10')
+    occupation: Html = Field(alias='field_11')
+    home_region: Html = Field(alias='field_12')
+    face_claim: Html = Field(alias='field_13')
+    art_credits: Html = Field(alias='field_14')
+    flavour_text: Html = Field(alias='field_15')
+    biography: Html = Field(alias='field_16')
+    plot_page: Html = Field(alias='field_17')
+    player_name: Html = Field(alias='field_18')
+    player_pronouns: Html = Field(alias='field_19')
+    player_timezone: TimeZoneOffset = Field(alias='field_20')
+    preferred_contact_method: ContactMethod = Field(alias='field_21')
+    mature_content: MatureContent = Field(alias='field_22')
+    hover_image: HttpUrl = Field(alias='field_23')
+    triggers_and_warnings: Html = Field(alias='field_24')
+    personal_computer: PersonalComputer = Field(alias='field_25')
+    inamorata_ability: Html = Field(alias='field_26')
+    proficiency_1: Proficiency = Field(alias='field_27')
+    proficiency_2: Proficiency = Field(alias='field_28')
+    proficiency_3: Proficiency = Field(alias='field_29')
+    proficiency_4: Proficiency = Field(alias='field_30')
+    development_forum: Html = Field(alias='field_31')
+    extra: Json['ExtraData'] = Field(alias='field_32')
+
+    @classmethod
+    def parse_html(cls, element: lxml.html.FormElement) -> Self:
+        return cls.model_validate(element.fields, from_attributes=False)
+
+
+def is_restricted_group(group: str) -> bool:
+    return group not in TrainerClass

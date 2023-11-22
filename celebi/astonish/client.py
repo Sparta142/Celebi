@@ -1,11 +1,12 @@
 import asyncio
 import inspect
 import re
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any, AnyStr, NamedTuple, Self
 
 import aiohttp
 import backoff
-from bs4 import BeautifulSoup, SoupStrainer, Tag
+import lxml.html
+from bs4 import BeautifulSoup
 from yarl import URL
 
 from celebi.astonish.models import (
@@ -13,14 +14,12 @@ from celebi.astonish.models import (
     ElementNotFoundError,
     Inventory,
     ItemStack,
+    MemberCard,
 )
-from celebi.utils import parse_form
 
 if TYPE_CHECKING:
     from aiohttp.typedefs import StrOrURL
     from backoff.types import Details
-
-    from celebi._types import Soupable
 
 __all__ = ['AstonishClient']
 
@@ -31,6 +30,11 @@ class LoginFailedError(Exception):
 
 class CharacterLookupError(LookupError):
     """Indicates that the requested character was not found."""
+
+
+class _ModCPFields(NamedTuple):
+    form_fields: dict[str, Any]
+    synthetic_fields: dict[str, Any]
 
 
 class AstonishClient:
@@ -59,21 +63,25 @@ class AstonishClient:
     async def login(self) -> None:
         """Authenticate with the forum."""
 
-        data = {
-            'referer': '',
-            'UserName': self.username,
-            'PassWord': self.password,
-            'CookieDate': 1,  # "Remember me"
-            'Privacy': 1,  # "Don't add me to the active users list"
-        }
-
         # The client session will store the necessary session cookies
         async with self.session.post(
             '/index.php',
-            params={'act': 'Login', 'CODE': '01'},
-            data=data,
+            params={
+                'act': 'Login',
+                'CODE': '01',
+            },
+            data={
+                'referer': '',
+                'UserName': self.username,
+                'PassWord': self.password,
+                'CookieDate': 1,  # "Remember me"
+                'Privacy': 1,  # "Don't add me to the active users list"
+            },
         ) as response:
             response.raise_for_status()
+
+            if 'member_id' not in response.cookies:
+                raise LoginFailedError('Response did not set expected cookie')
 
     async def get_character(self, memberid: int) -> Character:
         try:
@@ -85,18 +93,33 @@ class AstonishClient:
             # This is *probably* because the character doesn't exist
             raise CharacterLookupError(memberid) from e
 
-        fields = await fields_task
-        fields['group'] = await group_task
+        form, synthetic = await fields_task
+        synthetic['group'] = await group_task
 
-        assert fields['id'] == memberid, 'Member ID does not match'
+        assert synthetic['id'] == memberid, 'Member ID does not match'
 
-        return Character.model_validate(fields, from_attributes=False)
+        return Character.model_validate(
+            {**form, **synthetic},
+            from_attributes=False,
+        )
 
     async def get_character_group(self, memberid: int) -> str:
+        """
+        Get the group name associated with the given member ID.
+
+        :param memberid: The Jcink member ID to lookup
+        :return: The member's group
+        """
         markup = await self.get(params={'showuser': memberid})
         return self._parse_character_group(markup)
 
     async def get_inventory(self, memberid: int) -> Inventory:
+        """
+        Get a member's IBStore inventory.
+
+        :param memberid: The Jcink member ID to lookup
+        :return: The member's inventory
+        """
         params = {
             'act': 'store',
             'code': 'view_inventory',
@@ -134,7 +157,35 @@ class AstonishClient:
 
         return Inventory(owner=owner.text, items=items)
 
-    async def _get_modcp_fields(self, memberid: int) -> dict[str, Any]:
+    async def update_character(self, character: Character) -> None:
+        form, synthetic = await self._get_modcp_fields(character.id)
+        form['field_32'] = character.extra.model_dump_json()
+
+        action: URL = synthetic['$action']
+        assert action.origin() == self.base_url.origin()
+
+        async with self.session.post(action.relative(), data=form) as response:
+            response.raise_for_status()
+
+    async def get_all_characters(self) -> dict[int, MemberCard]:
+        markup = await self.get(
+            login=False,
+            params={
+                'act': 'Members',
+                'max_results': 1000,  # The forum returns an error over 1000
+            },
+        )
+
+        doc = lxml.html.document_fromstring(markup)
+        members: dict[int, MemberCard] = {}
+
+        for div in doc.cssselect('div.member-list-member'):
+            card = MemberCard.parse_html(div)
+            members[card.id] = card
+
+        return members
+
+    async def _get_modcp_fields(self, memberid: int) -> _ModCPFields:
         markup = await self.get(
             login=True,
             params={
@@ -182,92 +233,59 @@ class AstonishClient:
         return ('session_id' in cookies) and ('pass_hash' in cookies)
 
     @staticmethod
-    def _is_logged_in(markup: 'Soupable', /) -> bool:
-        soup = BeautifulSoup(
-            markup,
-            'lxml',
-            parse_only=SoupStrainer(['ul', 'li']),
-        )
-
-        a = soup.select_one(
+    def _is_logged_in(markup: AnyStr, /) -> bool:
+        doc = lxml.html.document_fromstring(markup)
+        (a,) = doc.cssselect(
             '#mobile-menu-activate > li[title="user profile"] > a[href*="showuser="]'
         )
-        if not isinstance(a, Tag):
-            raise ElementNotFoundError('<a href="...">')
-
-        match a['href']:
-            case [str(href), *_]:
-                url = URL(href)
-            case str(href):
-                url = URL(href)
-            case _:
-                raise AssertionError()
+        url = URL(a.attrib['href'])
 
         # If the showuser param is not 0, it (probably) refers
         # to the member ID of the currently logged-in user.
         return url.query.get('showuser') != '0'
 
     @classmethod
-    def _parse_modcp_fields(cls, markup: 'Soupable', /) -> dict[str, Any]:
-        def _match_form_action(action: str) -> bool:
-            url = URL(action)
-            return (
-                url.origin() == cls.base_url.origin()
-                and url.path == '/index.php'
-                and url.query.get('act') == 'modcp'
-                and url.query.get('CODE') == 'compedit'
-                and 'memberid' in url.query
-            )
-
-        soup = BeautifulSoup(
-            markup,
-            'lxml',
-            parse_only=SoupStrainer(['div', 'form']),
-        )
+    def _parse_modcp_fields(cls, markup: AnyStr, /) -> _ModCPFields:
+        doc = lxml.html.document_fromstring(markup)
 
         # Find the div containing the username
         pattern = re.compile(r'^Edit a users profile: (?P<username>.+)$', re.I)
 
-        maintitle = soup.find('div', class_='maintitle', string=pattern)
-        if not isinstance(maintitle, Tag):
-            raise ElementNotFoundError('<div class="maintitle">')
-
-        # Parse out the username with a regex (it should always match)
-        match = pattern.fullmatch(maintitle.text)
-        assert match is not None, "BeautifulSoup matched but re didn't"
+        for div in doc.cssselect('div.maintitle'):
+            if match := pattern.fullmatch(div.text or ''):
+                username = match.group('username')
+                break
+        else:
+            raise ValueError('Username not found')  # We didn't break
 
         # Find the "Edit a users profile" form so that we can take its fields
-        ibform = soup.find(
-            'form',
-            attrs={
-                'name': 'ibform',
-                'method': 'post',
-                'action': _match_form_action,
-            },
-        )
-        if not isinstance(ibform, Tag):
-            raise ElementNotFoundError('<form name="ibform"...>')
+        for form in doc.forms:
+            action = URL(form.action)
 
-        # Parse the member ID out of the form action URL
-        action = URL(ibform.attrs['action'])
-        memberid = int(action.query['memberid'])
+            if (
+                form.attrib.get('name') == 'ibform'
+                and form.method.casefold() == 'post'
+                and action.origin() == cls.base_url.origin()
+                and action.path == '/index.php'
+                and action.query.get('act') == 'modcp'
+                and action.query.get('CODE') == 'compedit'
+                and 'memberid' in action.query
+            ):
+                return _ModCPFields(
+                    form_fields=dict(form.fields),
+                    synthetic_fields={
+                        'username': username,
+                        'id': int(action.query['memberid']),
+                        '$action': action,
+                    },
+                )
 
-        return {
-            'username': match.group('username'),
-            'id': memberid,
-            **parse_form(ibform),
-        }
+        raise ElementNotFoundError('<form name="ibform"...>')
 
     @staticmethod
-    def _parse_character_group(markup: 'Soupable', /) -> str:
-        soup = BeautifulSoup(
-            markup,
-            'lxml',
-            parse_only=SoupStrainer(['li', 'span']),
+    def _parse_character_group(markup: AnyStr, /) -> str:
+        doc = lxml.html.document_fromstring(markup)
+        (span,) = doc.cssselect(
+            '#main-profile-trainer-class > span.description'
         )
-
-        span = soup.select_one('#main-profile-trainer-class > span.description')
-        if not isinstance(span, Tag):
-            raise ElementNotFoundError('<span class="description">')
-
-        return span.text.strip()
+        return span.text_content().strip()
