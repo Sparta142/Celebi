@@ -13,7 +13,7 @@ repository = "https://github.com/Sparta142/Celebi"
 
 [tool.poetry.dependencies]
 aiohttp = { version = "^3.9.0", extras = ["speedups"] }
-aiopokeapi = "^0.1.7"
+aiopokeapi = { git = "https://github.com/beastmatser/aiopokeapi.git", rev = "3f52f785f9c28711a270755f0253bf964bd65e86" }
 backoff = "^2.2.1"
 beautifulsoup4 = "^4.12.2"
 cssselect = "^1.2.0"
