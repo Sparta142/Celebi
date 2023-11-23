@@ -220,7 +220,10 @@ class TrainerClass(StrEnum):
     STRATEGOS = 'strategos'
     THIARCHOS = 'thiarchos'
     VALIDATING = 'validating'
-    """Pseudo trainer class for not-yet-accepted characters. """
+    """Pseudo trainer class for not-yet-accepted characters."""
+
+    NEREID = 'Nereid'
+    """Pseudo trainer class for characters used for test purposes."""
 
     def __str__(self) -> str:
         return self.value.title()
@@ -235,6 +238,7 @@ class TrainerClass(StrEnum):
             cls.SOPHIST: 0x8E681E,
             cls.STRATEGOS: 0xB36B42,
             cls.THIARCHOS: 0x8A56A4,
+            cls.NEREID: 0x5383C6,
         }.get(self)
 
 
