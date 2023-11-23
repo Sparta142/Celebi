@@ -5,7 +5,8 @@
       "name": "Celebi",
       "type": "python",
       "request": "launch",
-      "module": "celebi"
+      "module": "celebi",
+      "justMyCode": false
     }
   ]
 }
