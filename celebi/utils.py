@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, Iterable, Iterator, Protocol, TypeVar
 
 import aiopoke
@@ -94,3 +95,18 @@ def translate(
 
     if not found:
         raise ValueError(f'Language not found: {language!r}')
+
+
+@contextmanager
+def rewrap_exception(
+    from_type: type[BaseException],
+    to_type: type[BaseException],
+    /,
+):
+    if not issubclass(to_type, from_type):
+        raise TypeError('to_type must be a subtype of from_type')
+
+    try:
+        yield
+    except from_type as e:
+        raise to_type(*e.args) from None

@@ -32,11 +32,11 @@ class PokemonCog(Cog):
 
     @app_commands.command()
     @app_commands.guild_only()
-    @app_commands.rename(name_or_id='pokemon')
+    @app_commands.rename(pkmn='pokemon')
     async def pokemon(
         self,
         interaction: CelebiInteraction,
-        name_or_id: TransformPokemon,
+        pkmn: TransformPokemon,
         shiny: bool = False,
     ) -> None:
         """
@@ -45,18 +45,6 @@ class PokemonCog(Cog):
         :param name_or_id: The name or numeric ID of the Pokémon to search for.
         :param shiny: Whether to show details about the shiny variant of the Pokémon.
         """
-        try:
-            pkmn = await self.poke_client.get_pokemon(name_or_id)
-        except ValueError:
-            logger.warning(
-                'User tried to get an unknown Pokemon: %r', name_or_id
-            )
-            await interaction.response.send_message(
-                f"I couldn't find a Pokémon matching:\n>>> {name_or_id}",
-                ephemeral=True,
-            )
-            return
-
         embed = await self.presentation.embed_pokemon(pkmn, shiny=shiny)
         await interaction.response.send_message(embed=embed)
 

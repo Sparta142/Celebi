@@ -210,12 +210,12 @@ class AstonishCog(Cog):
     @app_commands.command()
     @app_commands.default_permissions(administrator=True)
     @app_commands.guild_only()
-    @app_commands.rename(name_or_id='pokemon')
-    async def give_pokemon(
+    @app_commands.rename(pkmn='pokemon')
+    async def add_pokemon(
         self,
         interaction: CelebiInteraction,
         character: TransformCharacter,
-        name_or_id: TransformPokemon,
+        pkmn: TransformPokemon,
         shiny: bool = False,
     ) -> None:
         """
@@ -228,8 +228,6 @@ class AstonishCog(Cog):
         await interaction.response.defer()
 
         pc = character.personal_computer
-        pkmn = await interaction.client.poke_client.get_pokemon(name_or_id)
-
         pc.root.append(Pokemon.from_aiopoke(pkmn, shiny=shiny))
 
         await interaction.client.astonish_client.update_character(character)

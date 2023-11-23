@@ -30,10 +30,6 @@ class LoginFailedError(Exception):
     """Indicates a failure to successfully login to the forum."""
 
 
-class CharacterLookupError(LookupError):
-    """Indicates that the requested character was not found."""
-
-
 class _ModCPFields(NamedTuple):
     form_fields: dict[str, Any]
     synthetic_fields: dict[str, Any]
@@ -93,7 +89,7 @@ class AstonishClient:
                 group_task = tg.create_task(self.get_character_group(memberid))
         except* ElementNotFoundError as e:
             # This is *probably* because the character doesn't exist
-            raise CharacterLookupError(memberid) from e
+            raise ValueError(f'Member not found: {memberid}') from e
 
         form, synthetic = await fields_task
         synthetic['group'] = await group_task

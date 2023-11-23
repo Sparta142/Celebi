@@ -4,8 +4,11 @@ import re
 from typing import TYPE_CHECKING, Any
 
 import aiohttp
+import aiopoke
 import rapidfuzz
 from discord.app_commands import Choice, Transform, Transformer
+
+from celebi.utils import rewrap_exception
 
 if TYPE_CHECKING:
     from celebi.astonish.models import Character, MemberCard
@@ -16,7 +19,17 @@ __all__ = [
     'CharacterTransformer',
     'TransformPokemon',
     'TransformCharacter',
+    'PokemonNotFoundError',
+    'CharacterNotFoundError',
 ]
+
+
+class PokemonNotFoundError(ValueError):
+    pass
+
+
+class CharacterNotFoundError(ValueError):
+    pass
 
 
 class PokemonTransformer(Transformer):
@@ -44,11 +57,16 @@ class PokemonTransformer(Transformer):
         self,
         interaction: CelebiInteraction,
         value: Any,
-    ) -> int | str:
+    ) -> aiopoke.Pokemon:
         try:
-            return int(value)
+            name_or_id = int(value)
         except ValueError:
-            return self.sanitize_query(value)
+            name_or_id = self.sanitize_query(value)
+
+        client = interaction.client.poke_client
+
+        with rewrap_exception(ValueError, PokemonNotFoundError):
+            return await client.get_pokemon(name_or_id)
 
     async def autocomplete(
         self,
@@ -71,7 +89,6 @@ class PokemonTransformer(Transformer):
         )
 
         # Limit the number of matches, then sort by similarity and alphabetically
-        # matches = list(itertools.islice(match_gen, 10))
         matches.sort(key=lambda m: (-m[1], m[0]))
 
         return [Choice(name=s, value=s) for (s, _, _) in matches]
@@ -118,7 +135,7 @@ class CharacterTransformer(Transformer):
             memberid = int(value)
         except ValueError:
             member_cards = await self._characters(interaction)
-            _, _, memberid = rapidfuzz.process.extractOne(
+            extraction = rapidfuzz.process.extractOne(
                 value,
                 {k: v.username for k, v in member_cards.items()},
                 scorer=_similarity,
@@ -126,8 +143,18 @@ class CharacterTransformer(Transformer):
                 score_cutoff=0.6,
             )
 
+            # If extraction is falsy/None, then we got no suggestions
+            if not extraction:
+                msg = f'Could not find a character matching {value!r}'
+                raise CharacterNotFoundError(msg)
+
+            # Otherwise, the best-matching member ID is the 3rd tuple element
+            memberid: int = extraction[2]
+
         ac = interaction.client.astonish_client
-        return await ac.get_character(memberid)
+
+        with rewrap_exception(ValueError, CharacterNotFoundError):
+            return await ac.get_character(memberid)
 
     async def autocomplete(
         self,
@@ -202,5 +229,5 @@ def _similarity(*args, score_cutoff: float, **kwargs) -> float:
     )
 
 
-TransformPokemon = Transform[str | int, PokemonTransformer]
+TransformPokemon = Transform[aiopoke.Pokemon, PokemonTransformer]
 TransformCharacter = Transform['Character', CharacterTransformer]

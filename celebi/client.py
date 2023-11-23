@@ -11,6 +11,10 @@ from ruamel.yaml import YAML
 
 from celebi.astonish.client import AstonishClient
 from celebi.config import Config
+from celebi.discord.transformers import (
+    CharacterNotFoundError,
+    PokemonNotFoundError,
+)
 from celebi.presentation import Presentation
 
 logger = logging.getLogger(__name__)
@@ -124,3 +128,37 @@ async def reload(interaction: CelebiInteraction, sync: bool = False) -> None:
     else:
         await interaction.followup.send('Done!', ephemeral=True)
         logger.info('Reload (by %r) successful', username)
+
+
+# Global handler for errors that can be handled cleanly somehow
+@client.tree.error
+async def on_error(
+    interaction: discord.Interaction,
+    error: app_commands.AppCommandError,
+) -> None:
+    assert isinstance(interaction.client, CelebiClient)
+
+    if not isinstance(error, app_commands.TransformerError):
+        return  # Don't handle non-Transformer errors here
+
+    match error.__cause__:
+        case PokemonNotFoundError():
+            logger.warning('Failed to query Pokemon matching %r', error.value)
+            content = "I couldn't find a Pokémon matching your search."
+        case CharacterNotFoundError():
+            logger.warning(
+                'Failed to query ASTONISH character matching %r',
+                error.value,
+            )
+            content = "I couldn't find a character matching your search."
+        case BaseException() as e:
+            logger.error('Unknown failure querying for Pokemon', exc_info=e)
+            content = (
+                'Something went wrong while running your command. '
+                'Try again in a little while.'
+            )
+        case _:
+            return
+
+    # We made it here so we must have a message to send
+    await interaction.response.send_message(content, ephemeral=True)
