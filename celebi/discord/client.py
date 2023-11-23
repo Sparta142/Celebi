@@ -5,6 +5,8 @@ from discord.abc import Snowflake
 from discord.app_commands import CommandTree
 from discord.flags import Intents
 
+__all__ = ['SingleGuildClient']
+
 
 class SingleGuildClient(Client):
     """

@@ -5,6 +5,8 @@ import discord
 
 from celebi.utils import clamp
 
+__all__ = ['EmbedMenu']
+
 
 class EmbedMenu(ABC, discord.ui.View):
     """
