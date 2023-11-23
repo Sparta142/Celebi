@@ -48,52 +48,58 @@ class Presentation:
     def language(self) -> str:
         return self.config.language
 
-    def embed_astonish_member(self, member: Character) -> discord.Embed:
-        if member.flavour_text:
-            description = f'>>> *{member.flavour_text.plain_text}*'
+    def embed_character(self, character: Character) -> discord.Embed:
+        """
+        Generate a :class:`discord.Embed` describing an ASTONISH character.
+
+        :param character: The character to embed.
+        :return: The embed.
+        """
+        if character.flavour_text:
+            description = f'>>> *{character.flavour_text.plain_text}*'
         else:
             description = None
 
         embed = discord.Embed(
-            title=member.username,
-            url=member.profile_url,
+            title=character.username,
+            url=character.profile_url,
             description=description,
-            color=member.trainer_class().color,
+            color=character.trainer_class().color,
         )
 
-        embed.set_thumbnail(url=member.hover_image)
+        embed.set_thumbnail(url=character.hover_image)
         embed.add_field(
             name='Gender',
-            value=member.gender_and_pronouns.plain_text,
+            value=character.gender_and_pronouns.plain_text,
         )
         embed.add_field(
             name='Age',
-            value=member.age.plain_text,
+            value=character.age.plain_text,
         )
         embed.add_field(
             name='Birthday',
-            value=member.date_of_birth.plain_text,
+            value=character.date_of_birth.plain_text,
         )
         embed.add_field(
             name='Home Region',
-            value=member.home_region.plain_text,
+            value=character.home_region.plain_text,
         )
         embed.add_field(
             name='Trainer Class',
-            value=str(member.trainer_class()),
+            value=str(character.trainer_class()),
         )
         embed.add_field(
             name='Blood Type',
-            value=str(member.blood_type),
+            value=str(character.blood_type),
         )
         embed.add_field(
             name='Occupation',
-            value=member.occupation.plain_text,
+            value=character.occupation.plain_text,
             inline=False,
         )
         embed.add_field(
             name='Proficiencies',
-            value=', '.join(str(p) for p in member.proficiencies),
+            value=', '.join(str(p) for p in character.proficiencies),
             inline=False,
         )
 

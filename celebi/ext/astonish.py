@@ -115,7 +115,7 @@ class AstonishCog(Cog):
 
         # Generate an embed for the character
         try:
-            embed = self.presentation.embed_astonish_member(character)
+            embed = self.presentation.embed_character(character)
         except Exception:
             await interaction.response.send_message(
                 "There was a problem displaying that character's profile.",
