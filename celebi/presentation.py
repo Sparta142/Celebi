@@ -133,9 +133,9 @@ class Presentation:
         # Convert Mars/Venus symbols to M/F, respectively
         display_name = name.replace('♂', ' M').replace('♀', 'F')
 
-        # Append the shiny suffix if necessary
+        # Reformat as shiny if necessary
         if shiny:
-            display_name += ' (Shiny)'
+            display_name = self.config.shiny_format.format(display_name)
 
         # Randomly pick and translate a flavor text to display
         try:
