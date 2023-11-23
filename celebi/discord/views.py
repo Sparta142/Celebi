@@ -27,6 +27,19 @@ class EmbedMenu(ABC, discord.ui.View):
 
         self._embed_cache: dict[int, discord.Embed] = {}
 
+        # If there's only one item, there's no next/last
+        if self.count == 1:
+            self._next.disabled = True
+            self._last.disabled = True
+
+    @property
+    def at_first(self) -> bool:
+        return self.index == 0
+
+    @property
+    def at_last(self) -> bool:
+        return self.index == (self.count - 1)
+
     @final
     @discord.ui.button(
         emoji='\N{BLACK LEFT-POINTING DOUBLE TRIANGLE}',
@@ -102,14 +115,11 @@ class EmbedMenu(ABC, discord.ui.View):
 
         # Update the view only if the current position changed
         if self._set_index(index):
-            at_first = index == 0
-            at_last = index == (self.count - 1)
-
             # Update our buttons to match the new position
-            self._first.disabled = at_first
-            self._previous.disabled = at_first
-            self._next.disabled = at_last
-            self._last.disabled = at_last
+            self._first.disabled = self.at_first
+            self._previous.disabled = self.at_first
+            self._next.disabled = self.at_last
+            self._last.disabled = self.at_last
 
             # Update the message's embed and buttons
             embed = await self.get_embed(index)
