@@ -13,9 +13,9 @@ if TYPE_CHECKING:
 
 __all__ = [
     'PokemonTransformer',
-    'AstonishCharacterTransformer',
-    'PokemonTransform',
-    'CharacterTransform',
+    'CharacterTransformer',
+    'TransformPokemon',
+    'TransformCharacter',
 ]
 
 
@@ -104,7 +104,7 @@ class PokemonTransformer(Transformer):
         return self.__all_pokemon
 
 
-class AstonishCharacterTransformer(Transformer):
+class CharacterTransformer(Transformer):
     def __init__(self) -> None:
         super().__init__()
         self.__characters: dict[int, MemberCard] | None = None
@@ -202,5 +202,5 @@ def _similarity(*args, score_cutoff: float, **kwargs) -> float:
     )
 
 
-PokemonTransform = Transform[str | int, PokemonTransformer]
-CharacterTransform = Transform['Character', AstonishCharacterTransformer]
+TransformPokemon = Transform[str | int, PokemonTransformer]
+TransformCharacter = Transform['Character', CharacterTransformer]

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from discord import app_commands
 from discord.ext.commands import Cog
 
-from celebi.discord.transformers import PokemonTransform
+from celebi.discord.transformers import TransformPokemon
 
 if TYPE_CHECKING:
     from aiopoke import AiopokeClient
@@ -36,7 +36,7 @@ class PokemonCog(Cog):
     async def pokemon(
         self,
         interaction: CelebiInteraction,
-        name_or_id: PokemonTransform,
+        name_or_id: TransformPokemon,
         shiny: bool = False,
     ) -> None:
         """

@@ -1,15 +1,15 @@
 from celebi.discord.transformers import (
-    AstonishCharacterTransformer,
-    CharacterTransform,
-    PokemonTransform,
+    CharacterTransformer,
     PokemonTransformer,
+    TransformCharacter,
+    TransformPokemon,
 )
 from celebi.discord.views import EmbedMenu
 
 __all__ = [
     'EmbedMenu',
-    'PokemonTransform',
+    'TransformPokemon',
     'PokemonTransformer',
-    'AstonishCharacterTransformer',
-    'CharacterTransform',
+    'CharacterTransformer',
+    'TransformCharacter',
 ]

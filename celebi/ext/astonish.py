@@ -14,7 +14,7 @@ from celebi.astonish.models import (
     Pokemon,
     is_restricted_group,
 )
-from celebi.discord.transformers import CharacterTransform, PokemonTransform
+from celebi.discord.transformers import TransformCharacter, TransformPokemon
 from celebi.discord.views import EmbedMenu
 
 if TYPE_CHECKING:
@@ -63,7 +63,7 @@ class AstonishCog(Cog):
     async def team(
         self,
         interaction: CelebiInteraction,
-        character: CharacterTransform,
+        character: TransformCharacter,
     ) -> None:
         """
         Shows a character's Pokémon team (personal computer).
@@ -104,7 +104,7 @@ class AstonishCog(Cog):
     async def character(
         self,
         interaction: CelebiInteraction,
-        character: CharacterTransform,
+        character: TransformCharacter,
     ) -> None:
         """
         Shows a character's profile.
@@ -135,7 +135,7 @@ class AstonishCog(Cog):
     async def inventory(
         self,
         interaction: CelebiInteraction,
-        character: CharacterTransform,
+        character: TransformCharacter,
     ) -> None:
         """
         Shows your character's item inventory.
@@ -182,7 +182,7 @@ class AstonishCog(Cog):
     async def extra(
         self,
         interaction: CelebiInteraction,
-        character: CharacterTransform,
+        character: TransformCharacter,
     ) -> None:
         dumped = character.extra.model_dump_json(indent=2)
         await interaction.response.send_message(f'```json\n{dumped}```')
@@ -214,8 +214,8 @@ class AstonishCog(Cog):
     async def give_pokemon(
         self,
         interaction: CelebiInteraction,
-        character: CharacterTransform,
-        name_or_id: PokemonTransform,
+        character: TransformCharacter,
+        name_or_id: TransformPokemon,
         shiny: bool = False,
     ) -> None:
         """
