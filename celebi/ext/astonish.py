@@ -329,7 +329,7 @@ class PokemonTeamView(EmbedMenu):
         self,
         original_user: discord.User | discord.Member,
         personal_computer: PersonalComputer,
-        presentation,
+        presentation: Presentation,
         poke_client: AiopokeClient,
     ) -> None:
         super().__init__(original_user, len(personal_computer))
