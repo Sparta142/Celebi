@@ -328,10 +328,12 @@ class Character(BaseModel):
         :param link: Whether to include a link to the character's profile.
         :return: The Markdown text.
         """
+        username = discord.utils.escape_markdown(self.username)
+
         if link:
-            return f'**[{self.username}]({self.profile_url})**'
+            return f'**[{username}]({self.profile_url})**'
         else:
-            return f'**{self.username}**'
+            return f'**{username}**'
 
     @property
     def profile_url(self) -> str:
