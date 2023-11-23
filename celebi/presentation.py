@@ -120,6 +120,7 @@ class Presentation:
     async def embed_pokemon(
         self,
         pkmn: Pokemon,
+        *,
         shiny: bool = False,
         detailed: bool = True,
     ) -> discord.Embed:

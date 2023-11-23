@@ -57,7 +57,7 @@ class PokemonCog(Cog):
             )
             return
 
-        embed = await self.presentation.embed_pokemon(pkmn, shiny)
+        embed = await self.presentation.embed_pokemon(pkmn, shiny=shiny)
         await interaction.response.send_message(embed=embed)
 
 
