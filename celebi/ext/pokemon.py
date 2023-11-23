@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from typing import TYPE_CHECKING
 
@@ -7,22 +9,25 @@ from discord.ext.commands import Cog
 from celebi.discord.transformers import PokemonTransform
 
 if TYPE_CHECKING:
+    from aiopoke import AiopokeClient
+
     from celebi.client import CelebiClient, CelebiInteraction
+    from celebi.presentation import Presentation
 
 
 logger = logging.getLogger(__name__)
 
 
 class PokemonCog(Cog):
-    def __init__(self, bot: 'CelebiClient') -> None:
+    def __init__(self, bot: CelebiClient) -> None:
         self.bot = bot
 
     @property
-    def poke_client(self):
+    def poke_client(self) -> AiopokeClient:
         return self.bot.poke_client
 
     @property
-    def presentation(self):
+    def presentation(self) -> Presentation:
         return self.bot.presentation
 
     @app_commands.command()
@@ -30,7 +35,7 @@ class PokemonCog(Cog):
     @app_commands.rename(name_or_id='pokemon')
     async def pokemon(
         self,
-        interaction: 'CelebiInteraction',
+        interaction: CelebiInteraction,
         name_or_id: PokemonTransform,
         shiny: bool = False,
     ) -> None:
@@ -56,5 +61,5 @@ class PokemonCog(Cog):
         await interaction.response.send_message(embed=embed)
 
 
-async def setup(bot: 'CelebiClient') -> None:
+async def setup(bot: CelebiClient) -> None:
     await bot.add_cog(PokemonCog(bot))

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from typing import TYPE_CHECKING, Iterable, Iterator, Protocol, TypeVar
 
@@ -12,11 +14,11 @@ logger = logging.getLogger(__name__)
 
 
 class _HasFullLanguage(Protocol):
-    language: 'Language'
+    language: Language
 
 
 class _HasMinimalLanguage(Protocol):
-    language: 'MinimalResource[Language]'
+    language: MinimalResource[Language]
 
 
 HasLanguage = _HasFullLanguage | _HasMinimalLanguage
@@ -61,10 +63,7 @@ def pokemon_name(
             return species.name.title()
 
 
-def translate_first(
-    objs: Iterable['TTranslated'],
-    language: str,
-) -> 'TTranslated':
+def translate_first(objs: Iterable[TTranslated], language: str) -> TTranslated:
     """
     Choose the first PokeAPI object matching the given language.
 
@@ -76,9 +75,9 @@ def translate_first(
 
 
 def translate(
-    objs: Iterable['TTranslated'],
+    objs: Iterable[TTranslated],
     language: str,
-) -> Iterator['TTranslated']:
+) -> Iterator[TTranslated]:
     """
     Choose the PokeAPI objects matching the given language.
 

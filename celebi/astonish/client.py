@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import inspect
 import re
@@ -199,7 +201,7 @@ class AstonishClient:
 
     @inspect.markcoroutinefunction  # @staticmethod is not recognized as async
     @staticmethod
-    async def _handle_not_logged_in(details: 'Details') -> None:
+    async def _handle_not_logged_in(details: Details) -> None:
         self: AstonishClient = details['args'][0]
         await self.login()
 
@@ -212,7 +214,7 @@ class AstonishClient:
     )
     async def get(
         self,
-        url: 'StrOrURL' = '/index.php',
+        url: StrOrURL = '/index.php',
         *,
         login: bool = True,
         **kwargs,

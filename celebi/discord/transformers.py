@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 from typing import TYPE_CHECKING, Any
 
@@ -40,7 +42,7 @@ class PokemonTransformer(Transformer):
 
     async def transform(
         self,
-        interaction: 'CelebiInteraction',
+        interaction: CelebiInteraction,
         value: Any,
     ) -> int | str:
         try:
@@ -50,7 +52,7 @@ class PokemonTransformer(Transformer):
 
     async def autocomplete(
         self,
-        interaction: 'CelebiInteraction',
+        interaction: CelebiInteraction,
         value: int | float | str,
     ) -> list[Choice[int | float | str]]:
         value = str(value)
@@ -105,13 +107,13 @@ class PokemonTransformer(Transformer):
 class AstonishCharacterTransformer(Transformer):
     def __init__(self) -> None:
         super().__init__()
-        self.__characters: dict[int, 'MemberCard'] | None = None
+        self.__characters: dict[int, MemberCard] | None = None
 
     async def transform(
         self,
-        interaction: 'CelebiInteraction',
+        interaction: CelebiInteraction,
         value: Any,
-    ) -> 'Character':
+    ) -> Character:
         try:
             memberid = int(value)
         except ValueError:
@@ -129,7 +131,7 @@ class AstonishCharacterTransformer(Transformer):
 
     async def autocomplete(
         self,
-        interaction: 'CelebiInteraction',
+        interaction: CelebiInteraction,
         value: int | float | str,
     ) -> list[Choice[str | int | float]]:
         member_cards = await self._characters(interaction)
@@ -162,7 +164,10 @@ class AstonishCharacterTransformer(Transformer):
         )
         return [Choice(name=str(v), value=str(k)) for (v, _, k) in matches]
 
-    async def _characters(self, interaction: 'CelebiInteraction'):
+    async def _characters(
+        self,
+        interaction: CelebiInteraction,
+    ) -> dict[int, MemberCard]:
         if self.__characters is None:
             ac = interaction.client.astonish_client
             self.__characters = await ac.get_all_characters()
@@ -170,7 +175,7 @@ class AstonishCharacterTransformer(Transformer):
         return self.__characters
 
 
-def _similarity(*args, score_cutoff: float, **kwargs):
+def _similarity(*args, score_cutoff: float, **kwargs) -> float:
     jw_similarity = rapidfuzz.distance.JaroWinkler.normalized_similarity(
         *args,
         **kwargs,

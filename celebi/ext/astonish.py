@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from io import BytesIO
 from typing import TYPE_CHECKING, ClassVar
@@ -27,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 class AstonishCog(Cog):
-    def __init__(self, bot: 'CelebiClient') -> None:
+    def __init__(self, bot: CelebiClient) -> None:
         self.bot = bot
 
         # https://github.com/Rapptz/discord.py/issues/7823
@@ -38,15 +40,15 @@ class AstonishCog(Cog):
         self.bot.tree.add_command(self._link_profile_ctxm)
 
     @property
-    def poke_client(self) -> 'AiopokeClient':
+    def poke_client(self) -> AiopokeClient:
         return self.bot.poke_client
 
     @property
-    def presentation(self) -> 'Presentation':
+    def presentation(self) -> Presentation:
         return self.bot.presentation
 
     @property
-    def astonish_client(self) -> 'AstonishClient':
+    def astonish_client(self) -> AstonishClient:
         return self.bot.astonish_client
 
     async def cog_unload(self) -> None:
@@ -60,7 +62,7 @@ class AstonishCog(Cog):
     @app_commands.guild_only()
     async def team(
         self,
-        interaction: 'CelebiInteraction',
+        interaction: CelebiInteraction,
         character: CharacterTransform,
     ) -> None:
         """
@@ -101,7 +103,7 @@ class AstonishCog(Cog):
     @app_commands.guild_only()
     async def character(
         self,
-        interaction: 'CelebiInteraction',
+        interaction: CelebiInteraction,
         character: CharacterTransform,
     ) -> None:
         """
@@ -132,7 +134,7 @@ class AstonishCog(Cog):
     @app_commands.guild_only()
     async def inventory(
         self,
-        interaction: 'CelebiInteraction',
+        interaction: CelebiInteraction,
         character: CharacterTransform,
     ) -> None:
         """
@@ -168,7 +170,7 @@ class AstonishCog(Cog):
     @app_commands.guild_only()
     async def link_profile(
         self,
-        interaction: 'CelebiInteraction',
+        interaction: CelebiInteraction,
         member_to_link: discord.Member,
     ) -> None:
         modal = LinkProfileModal(member_to_link, self.astonish_client)
@@ -179,7 +181,7 @@ class AstonishCog(Cog):
     @app_commands.guild_only()
     async def extra(
         self,
-        interaction: 'CelebiInteraction',
+        interaction: CelebiInteraction,
         character: CharacterTransform,
     ) -> None:
         dumped = character.extra.model_dump_json(indent=2)
@@ -188,7 +190,7 @@ class AstonishCog(Cog):
     @app_commands.command()
     @app_commands.default_permissions(administrator=True)
     @app_commands.guild_only()
-    async def all(self, interaction: 'CelebiInteraction') -> None:
+    async def all(self, interaction: CelebiInteraction) -> None:
         await interaction.response.defer()
 
         cards = await interaction.client.astonish_client.get_all_characters()
@@ -211,7 +213,7 @@ class AstonishCog(Cog):
     @app_commands.rename(name_or_id='pokemon')
     async def give_pokemon(
         self,
-        interaction: 'CelebiInteraction',
+        interaction: CelebiInteraction,
         character: CharacterTransform,
         name_or_id: PokemonTransform,
         shiny: bool = False,
@@ -265,13 +267,13 @@ class LinkProfileModal(ui.Modal, title='Link Jcink profile'):
     def __init__(
         self,
         member_to_link: discord.Member,
-        astonish_client: 'AstonishClient',
+        astonish_client: AstonishClient,
     ) -> None:
         super().__init__()
         self.member_to_link = member_to_link
         self.astonish_client = astonish_client
 
-    async def on_submit(self, interaction: 'CelebiInteraction') -> None:  # type: ignore[override]
+    async def on_submit(self, interaction: CelebiInteraction) -> None:  # type: ignore[override]
         await interaction.response.defer(ephemeral=True, thinking=True)
 
         # Parse it as a URL
@@ -328,7 +330,7 @@ class PokemonTeamView(EmbedMenu):
         original_user: discord.User | discord.Member,
         personal_computer: PersonalComputer,
         presentation,
-        poke_client: 'AiopokeClient',
+        poke_client: AiopokeClient,
     ) -> None:
         super().__init__(original_user, len(personal_computer))
 
@@ -356,5 +358,5 @@ class PokemonTeamView(EmbedMenu):
         return embed
 
 
-async def setup(bot: 'CelebiClient') -> None:
+async def setup(bot: CelebiClient) -> None:
     await bot.add_cog(AstonishCog(bot))
