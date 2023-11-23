@@ -16,6 +16,7 @@ from celebi.astonish.models import (
 )
 from celebi.discord.transformers import TransformCharacter, TransformPokemon
 from celebi.discord.views import EmbedMenu
+from celebi.utils import pokemon_name
 
 if TYPE_CHECKING:
     from aiopoke import AiopokeClient
@@ -210,13 +211,14 @@ class AstonishCog(Cog):
     @app_commands.command()
     @app_commands.default_permissions(administrator=True)
     @app_commands.guild_only()
-    @app_commands.rename(pkmn='pokemon')
+    @app_commands.rename(pkmn='pokemon', custom_sprite_url='sprite')
     async def add_pokemon(
         self,
         interaction: CelebiInteraction,
         character: TransformCharacter,
         pkmn: TransformPokemon,
         shiny: bool = False,
+        custom_sprite_url: str | None = None,
     ) -> None:
         """
         Add a Pokémon to a character's team (personal computer).
@@ -224,21 +226,37 @@ class AstonishCog(Cog):
         :param character: The (partial) name or numeric ID of the character to give the Pokémon to.
         :param name_or_id: The name or numeric ID of the Pokémon to add.
         :param shiny: Whether to add the shiny variant of the Pokémon.
+        :param custom_sprite_url: The custom sprite URL to use for this Pokémon. If left empty, the official artwork will be used.
         """
         await interaction.response.defer()
 
-        pc = character.personal_computer
-        pc.root.append(Pokemon.from_aiopoke(pkmn, shiny=shiny))
-
+        # Create and add the Pokemon to the character's PC
+        character.personal_computer.root.append(
+            Pokemon(
+                id=pkmn.id,
+                name=pokemon_name(
+                    await pkmn.forms[0].fetch(),
+                    await pkmn.species.fetch(),
+                ),
+                shiny=shiny,
+                custom_sprite_url=custom_sprite_url,
+            )
+        )
         await interaction.client.astonish_client.update_character(character)
+
+        # Notify the command sender of the outcome
+        embed = await interaction.client.presentation.embed_pokemon(
+            pkmn,
+            shiny=shiny,
+            detailed=False,
+        )
+
+        if custom_sprite_url:
+            embed.set_thumbnail(url=custom_sprite_url)
 
         await interaction.followup.send(
             f"Added a Pokémon to {character.markdown()}'s team:",
-            embed=await interaction.client.presentation.embed_pokemon(
-                pkmn,
-                shiny=shiny,
-                detailed=False,
-            ),
+            embed=embed,
         )
 
 

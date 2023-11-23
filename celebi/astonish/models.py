@@ -2,7 +2,6 @@ from enum import Enum, StrEnum
 from functools import cached_property
 from typing import Annotated, Any, ClassVar, Literal, Self
 
-import aiopoke
 import discord
 import lxml.etree
 import lxml.html
@@ -64,19 +63,6 @@ class Pokemon(BaseModel):
             'https://raw.githubusercontent.com'
             '/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork'
             f'{"/shiny" if self.shiny else ""}/{self.id}.png'
-        )
-
-    @classmethod
-    def from_aiopoke(
-        cls,
-        pkmn: aiopoke.Pokemon,
-        *,
-        shiny: bool = False,
-    ) -> Self:
-        return cls(
-            id=pkmn.id,
-            name=pkmn.name.title(),  # XXX
-            shiny=shiny,
         )
 
     @classmethod
