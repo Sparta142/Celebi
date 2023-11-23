@@ -8,7 +8,7 @@ from pydantic import BaseModel, PlainSerializer, PlainValidator, StrictStr
 from yarl import URL
 
 from celebi.astonish.models import Character, ItemStack
-from celebi.utils import translate, translate_first
+from celebi.utils import pokemon_name, translate, translate_first
 
 logger = logging.getLogger(__name__)
 
@@ -128,14 +128,7 @@ class Presentation:
         species = await pkmn.species.fetch()
 
         # Translate the specific Pokemon form name
-        try:
-            name = translate_first(pkmn_form.names, self.language).name
-        except ValueError:
-            try:
-                name = translate_first(species.names, self.language).name
-            except ValueError:
-                logger.warning('Missing name translation: %r', species.name)
-                name = species.name.title()
+        name = pokemon_name(pkmn_form, species, language=self.language)
 
         # Convert Mars/Venus symbols to M/F, respectively
         display_name = name.replace('♂', ' M').replace('♀', 'F')
