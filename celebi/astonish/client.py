@@ -201,7 +201,7 @@ class AstonishClient:
 
     @inspect.markcoroutinefunction  # @staticmethod is not recognized as async
     @staticmethod
-    async def _handle_not_logged_in(details: Details) -> None:
+    async def _on_login_failed(details: Details) -> None:
         self: AstonishClient = details['args'][0]
         await self.login()
 
@@ -210,7 +210,7 @@ class AstonishClient:
         LoginFailedError,
         interval=0,  # Retry immediately
         max_tries=2,  # Retry once (the try + the retry = 2 tries)
-        on_backoff=_handle_not_logged_in,
+        on_backoff=_on_login_failed,
     )
     async def get(
         self,
