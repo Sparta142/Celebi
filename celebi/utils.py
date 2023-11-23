@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class _HasFullLanguage(Protocol):
-    language: Language
+    language: 'Language'
 
 
 class _HasMinimalLanguage(Protocol):
