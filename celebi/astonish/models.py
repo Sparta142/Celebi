@@ -1,12 +1,11 @@
 from enum import Enum, StrEnum
 from functools import cached_property
-from typing import TYPE_CHECKING, Annotated, Any, ClassVar, Literal, Self
+from typing import Annotated, Any, ClassVar, Literal, Self
 
 import aiopoke
 import discord
 import lxml.etree
 import lxml.html
-from bs4 import BeautifulSoup, SoupStrainer, Tag
 from lxml.html.builder import E
 from pydantic import BaseModel as _BaseModel
 from pydantic import (
@@ -18,15 +17,13 @@ from pydantic import (
     Json,
     PlainSerializer,
     PositiveInt,
+    StrictBool,
     StrictStr,
     ValidatorFunctionWrapHandler,
     field_validator,
 )
 from pydantic_core import CoreSchema, core_schema
 from yarl import URL
-
-if TYPE_CHECKING:
-    from celebi._types import Soupable
 
 
 class ElementNotFoundError(Exception):
@@ -51,9 +48,9 @@ class BaseModel(_BaseModel):
 
 
 class Pokemon(BaseModel):
-    id: int = Field(gt=0)
-    name: str
-    shiny: bool = False
+    id: PositiveInt
+    name: StrictStr
+    shiny: StrictBool = False
     custom_sprite_url: HttpUrl | None = None
 
     _pkmn_id_attr: ClassVar[str] = 'data-pkmn-id'
@@ -83,54 +80,34 @@ class Pokemon(BaseModel):
         )
 
     @classmethod
-    def parse_all_html(cls, markup: 'Soupable') -> list[Self]:
-        return cls.parse_all_tag(
-            BeautifulSoup(
-                markup,
-                'lxml',
-                parse_only=SoupStrainer(['div', 'img']),
-            )
-        )
-
-    @classmethod
-    def parse_all_tag(cls, tag: Tag) -> list[Self]:
-        results = []
-
-        for parent in tag.find_all('div', class_='pkmn-display'):
-            assert isinstance(parent, Tag)
-
+    def parse_html(cls, element: lxml.html.HtmlElement) -> Self:
+        # If it has a Pokemon ID override, use that
+        try:
+            id = int(element.attrib[cls._pkmn_id_attr])
+        except KeyError:
             id = None
 
-            if parent.has_attr(cls._pkmn_id_attr):
-                id = int(parent.attrs[cls._pkmn_id_attr])
+        (pkmn_name,) = element.cssselect('div.pkmn-name')
+        (img,) = element.cssselect('img[src]')
+        src = URL(img.attrib['src'])
 
-            # Find <div class="pkmn-name">
-            name = parent.find('div', class_='pkmn-name', recursive=False)
-            assert isinstance(name, Tag)
+        # Fallback: try to parse the Pokemon ID out of the sprite URL
+        if id is None:
+            id = int(src.name.removesuffix(src.suffix))
 
-            # Find <img src="..." />
-            img = parent.find('img', src=True, recursive=False)
-            assert isinstance(img, Tag)
-
-            src = URL(img.attrs['src'])
-
-            if id is None:
-                id = int(src.name.removesuffix(src.suffix))
-
-            results.append(
-                cls(
-                    id=id,
-                    name=name.text,
-                    shiny='shiny' in parent.attrs['class'],
-                    custom_sprite_url=str(src),
-                )
-            )
-
-        return results
+        return cls(
+            id=id,
+            name=pkmn_name.text_content(),
+            shiny='shiny' in element.attrib.get('class', []),
+            custom_sprite_url=str(src),  # type: ignore
+        )
 
     def model_dump_html(self) -> str:
         element = E.div(
-            {'class': 'pkmn-display', self._pkmn_id_attr: str(self.id)},
+            {
+                'class': f'pkmn-display{" shiny" if self.shiny else ""}',
+                self._pkmn_id_attr: str(self.id),
+            },
             E.i({'class': 'fa-solid fa-sparkles'}, ''),
             E.div({'class': 'pkmn-name'}, self.name),
             E.img({'src': self.sprite_url}),
@@ -143,10 +120,30 @@ class Pokemon(BaseModel):
         )
 
 
-PersonalComputer = Annotated[
-    list[Pokemon],
-    BeforeValidator(Pokemon.parse_all_html),
-]
+class PersonalComputer(BaseModel):
+    root: list[Pokemon]
+
+    @classmethod
+    def parse_html(cls, element: lxml.html.HtmlElement) -> Self:
+        root = [
+            Pokemon.parse_html(elem)
+            for elem in element.cssselect(
+                '.Computer > #biography-body > .pkmn-display'
+            )
+        ]
+        return cls(root=root)
+
+    def __iter__(self):
+        return iter(self.root)
+
+    def __len__(self) -> int:
+        return len(self.root)
+
+    def __getitem__(self, item: int):
+        return self.root[item]
+
+    def model_dump_html(self) -> str:
+        return ''.join(pkmn.model_dump_html() for pkmn in self)
 
 
 class DescEnum(Enum):
@@ -265,11 +262,11 @@ class Character(BaseModel):
     group: StrictStr = Field(exclude=True)
     id: PositiveInt = Field(strict=True, exclude=True)
 
-    title: Html
-    website: Html
-    location: Html
-    interests: Html
-    signature: Html
+    title: Html = Field()
+    website: Html = Field()
+    location: Html = Field()
+    interests: Html = Field()
+    signature: Html = Field()
     full_name: Html = Field(alias='field_1')
     nicknames: Html = Field(alias='field_2')
     age: Html = Field(alias='field_3')
@@ -312,6 +309,29 @@ class Character(BaseModel):
         info,
     ):
         return ExtraDataV1() if v == '' else handler(v)
+
+    @field_validator('personal_computer', mode='before')
+    @classmethod
+    def _validate_personal_computer(cls, v: str) -> PersonalComputer:
+        return PersonalComputer(
+            root=[
+                Pokemon.parse_html(elem)
+                for elem in lxml.html.fragments_fromstring(v)
+            ]
+        )
+
+    def markdown(self, *, link: bool = True) -> str:
+        """
+        Generate Markdown text describing the character,
+        optionally including a hyperlink to their profile page.
+
+        :param link: Whether to include a link to the character's profile.
+        :return: The Markdown text.
+        """
+        if link:
+            return f'**[{self.username}]({self.profile_url})**'
+        else:
+            return f'**{self.username}**'
 
     @property
     def profile_url(self) -> str:

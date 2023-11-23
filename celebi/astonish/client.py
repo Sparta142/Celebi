@@ -159,6 +159,7 @@ class AstonishClient:
 
     async def update_character(self, character: Character) -> None:
         form, synthetic = await self._get_modcp_fields(character.id)
+        form['field_25'] = character.personal_computer.model_dump_html()
         form['field_32'] = character.extra.model_dump_json()
 
         action: URL = synthetic['$action']

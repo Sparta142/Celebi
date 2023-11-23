@@ -16,10 +16,12 @@ aiohttp = { version = "^3.9.0", extras = ["speedups"] }
 aiopokeapi = "^0.1.7"
 backoff = "^2.2.1"
 beautifulsoup4 = "^4.12.2"
+cssselect = "^1.2.0"
 "discord.py" = { version = "^2.3", extras = ["speed"] }
 lxml = "^4.9.3"
 pydantic = "^2.4.2"
 python = "^3.12"
+rapidfuzz = "^3.5.2"
 ruamel-yaml = "^0.18.5"
 yarl = "^1.9.2"
 
