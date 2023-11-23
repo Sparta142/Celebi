@@ -70,18 +70,20 @@ class CelebiClient(Bot):
     async def on_ready(self) -> None:
         logger.info('Ready! Logged in as @%s', self.user)
 
-    async def reload_all_extensions(self) -> None:
-        """Reload all loaded extensions, then re-sync the command tree."""
+    async def reload_all_extensions(self, *, sync: bool = False) -> None:
+        """
+        Reload all loaded extensions,
+        then re-sync the command tree if requested.
+        """
 
-        # Copy the extension list because it'll be modified when we do this
-        extensions = list(self.extensions)
-
-        for name in extensions:
+        # Create and iterate a list because otherwise we would mutate
+        # a container while iterating over it (and raise an exception).
+        for name in list(self.extensions):
             await self.reload_extension(name)
 
-        # Re-sync app commands
-        self.tree.copy_global_to(guild=GUILD)
-        await self.tree.sync(guild=GUILD)
+        if sync:
+            self.tree.copy_global_to(guild=GUILD)
+            await self.tree.sync(guild=GUILD)
 
 
 CelebiInteraction = discord.Interaction[CelebiClient]
@@ -104,15 +106,15 @@ async def is_owner(interaction: CelebiInteraction) -> bool:
 
 @client.tree.command()
 @app_commands.check(is_owner)
-async def reload(interaction: CelebiInteraction) -> None:
+async def reload(interaction: CelebiInteraction, sync: bool = False) -> None:
     username = interaction.user.name
 
-    logger.info('User %r is reloading the bot...', username)
+    logger.info('User %r is reloading the bot (sync: %s)...', username, sync)
 
     await interaction.response.defer(ephemeral=True, thinking=True)
 
     try:
-        await interaction.client.reload_all_extensions()
+        await interaction.client.reload_all_extensions(sync=sync)
     except BaseException as e:
         await interaction.followup.send(
             'Reload failed, more details may be available in the log.',
