@@ -180,7 +180,8 @@ class Presentation:
                     embed.add_field(name='Type', value=f'{emoji} {value}')
                 else:
                     logger.warning(
-                        'Guild is missing expected emoji: %r',
+                        'Guild %r is missing expected emoji: %r',
+                        self.guild.name,
                         emoji_name,
                     )
                     embed.add_field(name='Type', value=value)
