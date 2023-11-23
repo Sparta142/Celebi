@@ -1,18 +1,10 @@
 import logging
 import random
-import re
 from typing import Annotated
 
 import discord
 from aiopoke import Pokemon, PokemonSpecies
-from pydantic import (
-    BaseModel,
-    Field,
-    PlainSerializer,
-    PlainValidator,
-    StrictBool,
-    StrictStr,
-)
+from pydantic import BaseModel, PlainSerializer, PlainValidator, StrictStr
 from yarl import URL
 
 from celebi.astonish.models import Character, ItemStack
@@ -29,17 +21,6 @@ Color = Annotated[
 _INCHES_PER_METER = 1000 / 25.4
 _INCHES_PER_FOOT = 12
 _POUNDS_PER_KILOGRAM = 1 / 0.45359237
-
-
-class RegexRule(BaseModel):
-    pattern: re.Pattern
-    replacement: str
-    count: int = Field(default=0, ge=0)
-    stop: StrictBool = False
-
-    def apply(self, string: str, /) -> tuple[str, bool]:
-        string, n = self.pattern.subn(self.replacement, string)
-        return string, (self.stop and n > 0)
 
 
 class PresentationConfig(BaseModel):
