@@ -6,10 +6,13 @@ import os
 import aiopoke
 import discord
 from discord import app_commands
+from discord.app_commands import CommandInvokeError, TransformerError
 from discord.ext.commands import Bot
+from pydantic import ValidationError
 from ruamel.yaml import YAML
 
 from celebi.astonish.client import AstonishClient
+from celebi.astonish.models import RestrictedCharacterError, UserMismatchError
 from celebi.config import Config
 from celebi.discord.transformers import (
     CharacterNotFoundError,
@@ -138,27 +141,41 @@ async def on_error(
 ) -> None:
     assert isinstance(interaction.client, CelebiClient)
 
-    if not isinstance(error, app_commands.TransformerError):
-        return  # Don't handle non-Transformer errors here
-
-    match error.__cause__:
-        case PokemonNotFoundError():
+    match error:
+        case TransformerError(__cause__=PokemonNotFoundError()):
             logger.warning('Failed to query Pokemon matching %r', error.value)
             content = "I couldn't find a Pokémon matching your search."
-        case CharacterNotFoundError():
+
+        case TransformerError(__cause__=CharacterNotFoundError()):
             logger.warning(
                 'Failed to query ASTONISH character matching %r',
                 error.value,
             )
             content = "I couldn't find a character matching your search."
-        case BaseException() as e:
-            logger.error('Unknown failure querying for Pokemon', exc_info=e)
+
+        case CommandInvokeError(original=RestrictedCharacterError()):
+            content = "That character's profile is unavailable."
+
+        case CommandInvokeError(original=UserMismatchError()):
+            content = 'That information can only be viewed by their owner.'
+
+        case ValidationError() as e:
+            logger.error('Failed to parse data model:', exc_info=e)
+            content = (
+                'There was a problem with the data you requested.\n'
+                'The data you requested may be corrupted somehow, '
+                'or (more likely) the bot needs an update to address this.'
+            )
+
+        case _:
+            logger.error(
+                'Unknown failure when executing command',
+                exc_info=error,
+            )
             content = (
                 'Something went wrong while running your command. '
                 'Try again in a little while.'
             )
-        case _:
-            return
 
     # We made it here so we must have a message to send
     await interaction.response.send_message(content, ephemeral=True)
