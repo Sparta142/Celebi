@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from io import BytesIO
 from typing import TYPE_CHECKING, ClassVar
 
 import discord
@@ -9,11 +8,7 @@ from discord import app_commands, ui
 from discord.ext.commands import Cog
 from yarl import URL
 
-from celebi.astonish.models import (
-    PersonalComputer,
-    Pokemon,
-    is_restricted_group,
-)
+from celebi.astonish.models import PersonalComputer, Pokemon
 from celebi.discord.transformers import TransformCharacter, TransformPokemon
 from celebi.discord.views import ConfirmationView, EmbedMenu
 from celebi.utils import pokemon_name
@@ -200,26 +195,6 @@ class AstonishCog(Cog):
         """
         dumped = character.extra.model_dump_json(indent=2)
         await interaction.response.send_message(f'```json\n{dumped}```')
-
-    @app_commands.command()
-    @app_commands.default_permissions(administrator=True)
-    @app_commands.guild_only()
-    async def all(self, interaction: CelebiInteraction) -> None:
-        await interaction.response.defer()
-
-        cards = await interaction.client.astonish_client.get_all_characters()
-        content = '\n'.join(
-            (
-                f'#{card.id:>3}: {card.username}'
-                for card in sorted(cards.values(), key=lambda c: c.id)
-                if not is_restricted_group(card.group)
-            )
-        )
-
-        with BytesIO(content.encode('utf-8')) as f:
-            await interaction.followup.send(
-                file=discord.File(f, filename='members.txt'),
-            )
 
     @app_commands.command()
     @app_commands.default_permissions(administrator=True)
