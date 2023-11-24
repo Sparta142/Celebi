@@ -193,6 +193,11 @@ class AstonishCog(Cog):
         interaction: CelebiInteraction,
         character: TransformCharacter,
     ) -> None:
+        """
+        Shows the extra data attached to an ASTONISH character.
+
+        :param character: The (partial) name or numeric ID of the character whose data to show.
+        """
         dumped = character.extra.model_dump_json(indent=2)
         await interaction.response.send_message(f'```json\n{dumped}```')
 
