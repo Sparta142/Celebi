@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import final
 
 import discord
+from discord.enums import ButtonStyle
 
 from celebi.utils import clamp
 
@@ -20,7 +21,7 @@ class EmbedMenu(ABC, discord.ui.View):
         count: int,
         *,
         timeout: float | None = 180,
-    ):
+    ) -> None:
         super().__init__(timeout=timeout)
 
         self.original_user = original_user
@@ -47,7 +48,7 @@ class EmbedMenu(ABC, discord.ui.View):
         emoji='\N{BLACK LEFT-POINTING DOUBLE TRIANGLE}',
         disabled=True,
     )
-    async def _first(self, interaction: discord.Interaction, button):
+    async def _first(self, interaction: discord.Interaction, button) -> None:
         await self._update(interaction, 0)
 
     @final
@@ -55,17 +56,17 @@ class EmbedMenu(ABC, discord.ui.View):
         emoji='\N{BLACK LEFT-POINTING TRIANGLE}',
         disabled=True,
     )
-    async def _previous(self, interaction: discord.Interaction, button):
+    async def _previous(self, interaction: discord.Interaction, button) -> None:
         await self._update(interaction, self.index - 1)
 
     @final
     @discord.ui.button(emoji='\N{BLACK RIGHT-POINTING TRIANGLE}')
-    async def _next(self, interaction: discord.Interaction, button):
+    async def _next(self, interaction: discord.Interaction, button) -> None:
         await self._update(interaction, self.index + 1)
 
     @final
     @discord.ui.button(emoji='\N{BLACK RIGHT-POINTING DOUBLE TRIANGLE}')
-    async def _last(self, interaction: discord.Interaction, button):
+    async def _last(self, interaction: discord.Interaction, button) -> None:
         await self._update(interaction, self.count - 1)
 
     @final
@@ -132,3 +133,95 @@ class EmbedMenu(ABC, discord.ui.View):
         old_index = self.index
         self.index = clamp(value, 0, self.count - 1)
         return self.index != old_index
+
+
+class ConfirmationView(discord.ui.View):
+    def __init__(
+        self,
+        original_interaction: discord.Interaction,
+        *,
+        timeout: float | None = 180,
+    ) -> None:
+        super().__init__(timeout=timeout)
+        self.original_interaction = original_interaction
+
+        self._value: bool | None = None
+        self._interaction: discord.Interaction | None = None
+
+    @classmethod
+    async def display(
+        cls,
+        original_interaction: discord.Interaction,
+        *args,
+        timeout: float | None = 180,
+        **kwargs,
+    ) -> discord.Interaction | None:
+        """
+        Send a confirmation view as a response or followup to an app command.
+
+        If the user accepts, the returned :class:`discord.Interaction`
+        may be used to respond to the acceptance.
+        If the user cancels, or does not respond to the view in time,
+        `None` will be returned and the transaction is finished.
+
+        In either case, the original message containing the confirmation
+        view will be deleted.
+
+        :param original_interaction: The interaction to respond to.
+        :param timeout: How many seconds before the confirmation times out.
+        :return: An interaction that may be responded to, or `None`.
+        """
+        if 'view' in kwargs:
+            raise ValueError('view must not be provided')
+
+        # Ensure the view is ephemeral unless otherwise requested
+        kwargs.setdefault('ephemeral', True)
+
+        view = cls(original_interaction, timeout=timeout)
+
+        # Send the followup if necessary, otherwise the initial response
+        if original_interaction.response.is_done():
+            send = original_interaction.followup.send
+        else:
+            send = original_interaction.response.send_message
+
+        await send(*args, **kwargs, view=view)
+        return await view.wait_for_result()
+
+    @discord.ui.button(label='Cancel', style=ButtonStyle.danger)
+    async def _on_cancel(
+        self,
+        interaction: discord.Interaction,
+        button,
+    ) -> None:
+        await self._finish(False, interaction)
+
+    @discord.ui.button(label='Accept', style=ButtonStyle.success)
+    async def _on_accept(
+        self,
+        interaction: discord.Interaction,
+        button,
+    ) -> None:
+        await self._finish(True, interaction)
+
+    async def on_timeout(self) -> None:
+        await self._finish(False, None)
+
+    async def _finish(
+        self,
+        value: bool,
+        interaction: discord.Interaction | None,
+    ) -> None:
+        self._value = value
+        self._interaction = interaction
+        await self.original_interaction.delete_original_response()
+        self.stop()
+
+    async def wait_for_result(self) -> discord.Interaction | None:
+        await self.wait()
+
+        if self._value:
+            assert self._interaction is not None
+            return self._interaction
+
+        return None
