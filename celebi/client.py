@@ -60,6 +60,7 @@ class CelebiClient(Bot):
 
         # Load bot extensions
         await self.load_extension('celebi.ext.astonish')
+        await self.load_extension('celebi.ext.owner')
         await self.load_extension('celebi.ext.pokemon')
 
         # Sync app commands
@@ -105,32 +106,6 @@ def get_config():
 
 
 client = CelebiClient(get_config())
-
-
-async def is_owner(interaction: CelebiInteraction) -> bool:
-    return await interaction.client.is_owner(interaction.user)
-
-
-@client.tree.command()
-@app_commands.check(is_owner)
-async def reload(interaction: CelebiInteraction, sync: bool = False) -> None:
-    username = interaction.user.name
-
-    logger.info('User %r is reloading the bot (sync: %s)...', username, sync)
-
-    await interaction.response.defer(ephemeral=True, thinking=True)
-
-    try:
-        await interaction.client.reload_all_extensions(sync=sync)
-    except BaseException as e:
-        await interaction.followup.send(
-            'Reload failed, more details may be available in the log.',
-            ephemeral=True,
-        )
-        logger.exception('Reload (by %r) failed', username, exc_info=e)
-    else:
-        await interaction.followup.send('Done!', ephemeral=True)
-        logger.info('Reload (by %r) successful', username)
 
 
 # Global handler for errors that can be handled cleanly somehow
