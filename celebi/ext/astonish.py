@@ -129,6 +129,14 @@ class AstonishCog(Cog):
             )
             return
 
+        # Add the linked Discord user if available
+        if character.extra.discord_id:
+            embed.add_field(
+                name='Played by',
+                value=f'<@{character.extra.discord_id}>',
+                inline=True,
+            )
+
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
