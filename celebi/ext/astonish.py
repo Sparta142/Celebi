@@ -211,8 +211,8 @@ class AstonishCog(Cog):
         """
         Add a Pokémon to a character's team (personal computer).
 
+        :param pkmn: The name or numeric ID of the Pokémon to add.
         :param character: The (partial) name or numeric ID of the character to give the Pokémon to.
-        :param name_or_id: The name or numeric ID of the Pokémon to add.
         :param shiny: Whether to add the shiny variant of the Pokémon.
         :param custom_sprite_url: The custom sprite URL to use for this Pokémon. If left empty, the official artwork will be used.
         """
