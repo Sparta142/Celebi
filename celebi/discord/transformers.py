@@ -8,6 +8,7 @@ import aiopoke
 import rapidfuzz
 from discord.app_commands import Choice, Transform, Transformer
 
+from celebi.astonish.models import is_restricted_group
 from celebi.utils import rewrap_exception
 
 if TYPE_CHECKING:
@@ -197,7 +198,11 @@ class CharacterTransformer(Transformer):
     ) -> dict[int, MemberCard]:
         if self.__characters is None:
             ac = interaction.client.astonish_client
-            self.__characters = await ac.get_all_characters()
+            self.__characters = {
+                k: v
+                for k, v in (await ac.get_all_characters()).items()
+                if not is_restricted_group(v.group)
+            }
 
         return self.__characters
 
