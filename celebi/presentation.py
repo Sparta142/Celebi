@@ -48,11 +48,17 @@ class Presentation:
     def language(self) -> str:
         return self.config.language
 
-    def embed_character(self, character: Character) -> discord.Embed:
+    def embed_character(
+        self,
+        character: Character,
+        *,
+        detailed: bool = True,
+    ) -> discord.Embed:
         """
         Generate a :class:`discord.Embed` describing an ASTONISH character.
 
         :param character: The character to embed.
+        :param detailed: Whether to add lots of details to the embed.
         :return: The embed.
         """
         if character.flavour_text:
@@ -68,40 +74,47 @@ class Presentation:
         )
 
         embed.set_thumbnail(url=character.hover_image)
-        embed.add_field(
-            name='Gender',
-            value=character.gender_and_pronouns.plain_text,
+        embed.set_author(
+            name='ASTONISH',
+            url='https://astonish.jcink.net/',
+            icon_url='https://cdn.discordapp.com/icons/1143929947132538931/df2d24f751203a91585ad112a39edb1a.png',
         )
-        embed.add_field(
-            name='Age',
-            value=character.age.plain_text,
-        )
-        embed.add_field(
-            name='Birthday',
-            value=character.date_of_birth.plain_text,
-        )
-        embed.add_field(
-            name='Home Region',
-            value=character.home_region.plain_text,
-        )
-        embed.add_field(
-            name='Trainer Class',
-            value=str(character.trainer_class()),
-        )
-        embed.add_field(
-            name='Blood Type',
-            value=str(character.blood_type),
-        )
-        embed.add_field(
-            name='Occupation',
-            value=character.occupation.plain_text,
-            inline=False,
-        )
-        embed.add_field(
-            name='Proficiencies',
-            value=', '.join(str(p) for p in character.proficiencies),
-            inline=False,
-        )
+
+        if detailed:
+            embed.add_field(
+                name='Gender',
+                value=character.gender_and_pronouns.plain_text,
+            )
+            embed.add_field(
+                name='Age',
+                value=character.age.plain_text,
+            )
+            embed.add_field(
+                name='Birthday',
+                value=character.date_of_birth.plain_text,
+            )
+            embed.add_field(
+                name='Home Region',
+                value=character.home_region.plain_text,
+            )
+            embed.add_field(
+                name='Trainer Class',
+                value=str(character.trainer_class()),
+            )
+            embed.add_field(
+                name='Blood Type',
+                value=str(character.blood_type),
+            )
+            embed.add_field(
+                name='Occupation',
+                value=character.occupation.plain_text,
+                inline=False,
+            )
+            embed.add_field(
+                name='Proficiencies',
+                value=', '.join(str(p) for p in character.proficiencies),
+                inline=False,
+            )
 
         return embed
 
