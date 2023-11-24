@@ -279,6 +279,95 @@ class AstonishCog(Cog):
             embed=pkmn_embed,
         )
 
+    @app_commands.command()
+    @app_commands.default_permissions(administrator=True)
+    @app_commands.guild_only()
+    @app_commands.rename(name_or_index='pokemon')
+    async def remove_pokemon(
+        self,
+        interaction: CelebiInteraction,
+        name_or_index: str,
+        character: TransformCharacter,
+    ) -> None:
+        """
+        Remove a Pokémon from a character's team (personal computer).
+
+        :param name_or_index: The exact name or numeric (1-based) index of the Pokémon to remove.
+        :param character: The (partial) name or numeric ID of the character to remove the Pokémon from.
+        """
+        await interaction.response.defer(ephemeral=True)
+
+        pc = character.personal_computer.root
+        index = None
+
+        # Find the index of the Pokemon to remove
+        try:
+            index = int(name_or_index) - 1  # Convert to 0-indexing
+        except ValueError:
+            # Find the Pokemon with the exact name as queried
+            for i, pkmn in enumerate(pc):
+                if pkmn.name.casefold() == name_or_index.casefold():
+                    index = i
+                    break
+
+        if index is None or not (0 <= index < len(pc)):
+            logger.warning(
+                "Failed to query PC Pokemon matching %r in character #%r's team",
+                name_or_index,
+                character.id,
+            )
+
+            content = "I couldn't find the Pokémon matching your search."
+            await interaction.followup.send(content)
+            return
+
+        pkmn = pc[index]
+
+        # Create the Pokemon embed
+        pkmn_embed = pkmn.embed()
+
+        # Create the Character embed
+        character_embed = interaction.client.presentation.embed_character(
+            character,
+            detailed=False,
+        )
+
+        # Confirm whether we found the proper Pokemon/character to modify
+        continuation = await ConfirmationView.display(
+            interaction,
+            (
+                f"You're trying to remove **{pkmn.name}** from "
+                f"{character.markdown()}'s team. Is this correct?"
+            ),
+            embeds=[pkmn_embed, character_embed],
+        )
+
+        if not continuation:
+            return
+
+        await continuation.response.defer()
+
+        # Remove the Pokemon from the target PC
+        pc.pop(index)
+        await self.astonish_client.update_character(character)
+
+        logger.info(
+            "%r removed %r (#%d) from character #%d's PC",
+            continuation.user.name,
+            pkmn.name,
+            pkmn.id,
+            character.id,
+        )
+
+        # Notify the command sender of the outcome
+        await continuation.followup.send(
+            (
+                f'{continuation.user.mention} removed a Pokémon '
+                f"from {character.markdown()}'s team:"
+            ),
+            embed=pkmn_embed,
+        )
+
 
 class LinkProfileModal(ui.Modal, title='Link Jcink profile'):
     """
