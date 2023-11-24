@@ -49,10 +49,10 @@ def pokemon_name(
     """
     Return the best name for a given Pokemon form and species.
 
-    :param form: _description_
-    :param species: _description_
-    :param language: _description_, defaults to 'en'
-    :return: _description_
+    :param form: The specific Pokemon form.
+    :param species: The species of Pokemon.
+    :param language: The desired name language.
+    :return: The most specific name available for the Pokemon form+species.
     """
     try:
         return translate_first(form.names, language=language).name
@@ -60,7 +60,7 @@ def pokemon_name(
         try:
             return translate_first(species.names, language=language).name
         except ValueError:
-            logger.warning('Failed to get suitable name for ')
+            logger.warning('Failed to get suitable name for %r', form.name)
             return species.name.title()
 
 
