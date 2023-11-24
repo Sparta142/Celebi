@@ -15,7 +15,7 @@ from celebi.astonish.models import (
     is_restricted_group,
 )
 from celebi.discord.transformers import TransformCharacter, TransformPokemon
-from celebi.discord.views import EmbedMenu
+from celebi.discord.views import ConfirmationView, EmbedMenu
 from celebi.utils import pokemon_name
 
 if TYPE_CHECKING:
@@ -215,8 +215,8 @@ class AstonishCog(Cog):
     async def add_pokemon(
         self,
         interaction: CelebiInteraction,
-        character: TransformCharacter,
         pkmn: TransformPokemon,
+        character: TransformCharacter,
         shiny: bool = False,
         custom_sprite_url: str | None = None,
     ) -> None:
@@ -228,9 +228,39 @@ class AstonishCog(Cog):
         :param shiny: Whether to add the shiny variant of the Pokémon.
         :param custom_sprite_url: The custom sprite URL to use for this Pokémon. If left empty, the official artwork will be used.
         """
-        await interaction.response.defer()
+        await interaction.response.defer(ephemeral=True)
 
-        # Create and add the Pokemon to the character's PC
+        # Create the Pokemon embed
+        pkmn_embed = await interaction.client.presentation.embed_pokemon(
+            pkmn,
+            shiny=shiny,
+            detailed=False,
+        )
+        if custom_sprite_url:
+            pkmn_embed.set_thumbnail(url=custom_sprite_url)
+
+        # Create the Character embed
+        character_embed = interaction.client.presentation.embed_character(
+            character,
+            detailed=False,
+        )
+
+        # Confirm whether we found the proper Pokemon/character to modify
+        continuation = await ConfirmationView.display(
+            interaction,
+            (
+                f"You're trying to add **{pkmn_embed.title}** to "
+                f"{character.markdown()}'s team. Is this correct?"
+            ),
+            embeds=[pkmn_embed, character_embed],
+        )
+
+        if not continuation:
+            return
+
+        await continuation.response.defer()
+
+        # Create and add the Pokemon to the target PC
         character.personal_computer.root.append(
             Pokemon(
                 id=pkmn.id,
@@ -239,24 +269,26 @@ class AstonishCog(Cog):
                     await pkmn.species.fetch(),
                 ),
                 shiny=shiny,
-                custom_sprite_url=custom_sprite_url,
+                custom_sprite_url=custom_sprite_url,  # type: ignore
             )
         )
-        await interaction.client.astonish_client.update_character(character)
+        await self.astonish_client.update_character(character)
 
-        # Notify the command sender of the outcome
-        embed = await interaction.client.presentation.embed_pokemon(
-            pkmn,
-            shiny=shiny,
-            detailed=False,
+        logger.info(
+            "%r added %r (#%d) to character #%d's PC",
+            continuation.user.name,
+            pkmn.name,
+            pkmn.id,
+            character.id,
         )
 
-        if custom_sprite_url:
-            embed.set_thumbnail(url=custom_sprite_url)
-
-        await interaction.followup.send(
-            f"Added a Pokémon to {character.markdown()}'s team:",
-            embed=embed,
+        # Notify the command sender of the outcome
+        await continuation.followup.send(
+            (
+                f'{continuation.user.mention} added a Pokémon '
+                f"to {character.markdown()}'s team:"
+            ),
+            embed=pkmn_embed,
         )
 
 
