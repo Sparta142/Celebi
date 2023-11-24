@@ -105,6 +105,14 @@ class Pokemon(BaseModel):
             pretty_print=False,
         )
 
+    def embed(self) -> discord.Embed:
+        embed = discord.Embed(
+            title=f'{self.name} (Shiny)' if self.shiny else self.name,
+            description=f'**No. {self.id}**',
+        )
+        embed.set_thumbnail(url=self.sprite_url)
+        return embed
+
 
 class PersonalComputer(BaseModel):
     root: list[Pokemon]
