@@ -237,7 +237,7 @@ class AstonishCog(Cog):
         continuation = await ConfirmationView.display(
             interaction,
             (
-                f"You're trying to add **{pkmn_embed.title}** to "
+                f"You're about to add **{pkmn_embed.title}** to "
                 f"{character.markdown()}'s team. Is this correct?"
             ),
             embeds=[pkmn_embed, character_embed],
@@ -336,7 +336,7 @@ class AstonishCog(Cog):
         continuation = await ConfirmationView.display(
             interaction,
             (
-                f"You're trying to remove **{pkmn.name}** from "
+                f"You're about to remove **{pkmn.name}** from "
                 f"{character.markdown()}'s team. Is this correct?"
             ),
             embeds=[pkmn_embed, character_embed],
