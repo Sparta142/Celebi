@@ -49,7 +49,10 @@ class UserMismatchError(Exception):
 
 
 class BaseModel(_BaseModel):
-    model_config = ConfigDict(str_strip_whitespace=True)
+    model_config = ConfigDict(
+        from_attributes=False,
+        str_strip_whitespace=True,
+    )
 
 
 class Pokemon(BaseModel):
