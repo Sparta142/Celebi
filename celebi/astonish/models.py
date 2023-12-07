@@ -19,10 +19,16 @@ from pydantic import (
     StrictBool,
     StrictStr,
     ValidatorFunctionWrapHandler,
+    WrapValidator,
     field_validator,
 )
 from pydantic_core import CoreSchema, core_schema
 from yarl import URL
+
+OptionalHttpUrl = Annotated[
+    HttpUrl | None,
+    WrapValidator(lambda v, handler: None if not v else handler(v)),
+]
 
 
 class ElementNotFoundError(Exception):
@@ -50,7 +56,7 @@ class Pokemon(BaseModel):
     id: PositiveInt
     name: StrictStr
     shiny: StrictBool = False
-    custom_sprite_url: HttpUrl | None = None
+    custom_sprite_url: OptionalHttpUrl = None
 
     _pkmn_id_attr: ClassVar[str] = 'data-pkmn-id'
 
@@ -283,7 +289,7 @@ class Character(BaseModel):
     player_timezone: TimeZoneOffset = Field(alias='field_20')
     preferred_contact_method: ContactMethod = Field(alias='field_21')
     mature_content: MatureContent = Field(alias='field_22')
-    hover_image: HttpUrl = Field(alias='field_23')
+    hover_image: OptionalHttpUrl = Field(alias='field_23')
     triggers_and_warnings: Html = Field(alias='field_24')
     personal_computer: PersonalComputer = Field(alias='field_25')
     inamorata_ability: Html = Field(alias='field_26')
@@ -478,7 +484,7 @@ class ModCPFields(BaseModel):
     player_timezone: TimeZoneOffset = Field(alias='field_20')
     preferred_contact_method: ContactMethod = Field(alias='field_21')
     mature_content: MatureContent = Field(alias='field_22')
-    hover_image: HttpUrl = Field(alias='field_23')
+    hover_image: OptionalHttpUrl = Field(alias='field_23')
     triggers_and_warnings: Html = Field(alias='field_24')
     personal_computer: PersonalComputer = Field(alias='field_25')
     inamorata_ability: Html = Field(alias='field_26')
