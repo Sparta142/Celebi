@@ -70,6 +70,10 @@ class EmbedMenu(ABC, discord.ui.View):
         await self._update(interaction, self.count - 1)
 
     @final
+    async def default_embed(self) -> discord.Embed:
+        return await self.get_embed(0)
+
+    @final
     async def get_embed(self, index: int, /) -> discord.Embed:
         """
         Get the cached :class:`discord.Embed` for the given item index,

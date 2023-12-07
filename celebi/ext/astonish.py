@@ -87,11 +87,10 @@ class AstonishCog(Cog):
             self.presentation,
             self.poke_client,
         )
-        embed = await view.create_embed(0)
 
         await interaction.followup.send(
             content=f'{character.markdown()} has {count} Pokémon on their team:',
-            embed=embed,
+            embed=await view.default_embed(),
             view=view,
         )
 
