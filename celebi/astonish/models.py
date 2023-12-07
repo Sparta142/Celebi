@@ -195,6 +195,8 @@ class MatureContent(DescEnum):
 
 class Proficiency(DescEnum):
     NONE = 'n', 'None'
+
+    # Basic proficiencies
     COMBAT = 'c', 'Combat'
     SURVIVAL = 's', 'Survival'
     POKEMON_KNOWLEDGE = 'pk', 'Pokémon Knowledge'
@@ -207,6 +209,20 @@ class Proficiency(DescEnum):
     PERFORMANCE = 'perf', 'Performance'
     STYLING = 'st', 'Styling'
     PERSUASION = 'pers', 'Persuasion'
+
+    # Master proficiencies
+    COMBAT_MASTERY = 'cm', 'Combat Mastery'
+    SURVIVAL_MASTERY = 'sm', 'Survival Mastery'
+    POKEMON_KNOWLEDGE_MASTERY = 'pkm', 'Pokémon Knowledge Mastery'
+    POKEMON_HANDLING_MASTERY = 'phm', 'Pokémon Handling Mastery'
+    HISTORY_MASTERY = 'hm', 'History Mastery'
+    AURA_MASTERY = 'am', 'Aura Mastery'
+    INSIGHT_MASTERY = 'insm', 'Insight Mastery'
+    INVESTIGATION_MASTERY = 'invm', 'Investigation Mastery'
+    INTIMIDATION_MASTERY = 'intm', 'Intimidation Mastery'
+    PERFORMANCE_MASTERY = 'perfm', 'Performance Mastery'
+    STYLING_MASTERY = 'stm', 'Styling Mastery'
+    PERSUASION_MASTERY = 'persm', 'Persuasion Mastery'
 
 
 class TrainerClass(StrEnum):
