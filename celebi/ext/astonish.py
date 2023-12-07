@@ -29,11 +29,11 @@ class AstonishCog(Cog):
         self.bot = bot
 
         # https://github.com/Rapptz/discord.py/issues/7823
-        self._link_profile_ctxm = app_commands.ContextMenu(
+        self._link_profile_menu = app_commands.ContextMenu(
             name='Link Jcink profile',
             callback=self.link_profile,
         )
-        self.bot.tree.add_command(self._link_profile_ctxm)
+        self.bot.tree.add_command(self._link_profile_menu)
 
     @property
     def poke_client(self) -> AiopokeClient:
@@ -50,8 +50,8 @@ class AstonishCog(Cog):
     async def cog_unload(self) -> None:
         # https://github.com/Rapptz/discord.py/issues/7823
         self.bot.tree.remove_command(
-            self._link_profile_ctxm.name,
-            type=self._link_profile_ctxm.type,
+            self._link_profile_menu.name,
+            type=self._link_profile_menu.type,
         )
 
     @app_commands.command()
