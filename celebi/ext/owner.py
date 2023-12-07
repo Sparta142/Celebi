@@ -57,13 +57,14 @@ class OwnerCog(
             await interaction.followup.send('Done!', ephemeral=True)
             logger.info('Reload (by %r) successful', username)
 
-    # Only allow termination by command if there's a reasonable chance
-    # the bot can self-recover from it. Generally, only in Docker
+    # Only allow process termination by command if there's a reasonable
+    # chance the bot can self-recover from it. This is probably only true
+    # if the bot is currently running inside a Docker container
     # (assuming a proper restart policy for the container is configured).
     if discord.utils.is_docker():
 
         @app_commands.command()
-        async def terminate(self, interaction: CelebiInteraction) -> None:
+        async def kill(self, interaction: CelebiInteraction) -> None:
             """Terminate the bot process."""
 
             continuation = await ConfirmationView.display(
@@ -84,11 +85,11 @@ class OwnerCog(
 
         logger.info(
             "Running in Docker; '/%s' is available",
-            terminate.qualified_name,
+            kill.qualified_name,
         )
 
     else:
-        logger.info('Not running in Docker; terminate sub-command unavailable')
+        logger.info("Not running in Docker; 'kill' subcommand unavailable")
 
 
 async def setup(bot: CelebiClient) -> None:
