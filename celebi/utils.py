@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from typing import TYPE_CHECKING, Iterable, Iterator, Protocol, TypeVar
 
 import aiopoke
@@ -41,7 +41,7 @@ def clamp(
 
 
 def pokemon_name(
-    form: aiopoke.PokemonForm,
+    form: aiopoke.PokemonForm | None,
     species: aiopoke.PokemonSpecies,
     *,
     language: str = 'en',
@@ -49,19 +49,24 @@ def pokemon_name(
     """
     Return the best name for a given Pokemon form and species.
 
-    :param form: The specific Pokemon form.
+    :param form: The specific Pokemon form, if known.
     :param species: The species of Pokemon.
     :param language: The desired name language.
     :return: The most specific name available for the Pokemon form+species.
     """
-    try:
-        return translate_first(form.names, language=language).name
-    except ValueError:
-        try:
-            return translate_first(species.names, language=language).name
-        except ValueError:
-            logger.warning('Failed to get suitable name for %r', form.name)
-            return species.name.title()
+    if form is not None:
+        with suppress(ValueError):
+            return translate_first(form.names, language=language).name
+
+    with suppress(ValueError):
+        return translate_first(species.names, language=language).name
+
+    logger.warning(
+        'Failed to get suitable name for form %r (species %r)',
+        form.name if form is not None else None,
+        species.name,
+    )
+    return species.name.title()
 
 
 def translate_first(objs: Iterable[TTranslated], language: str) -> TTranslated:
