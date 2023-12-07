@@ -29,7 +29,7 @@ ASTONISH_PASSWORD = os.environ['ASTONISH_PASSWORD']
 
 class CelebiClient(Bot):
     def __init__(self, config: Config) -> None:
-        super().__init__('', intents=discord.Intents.default())
+        super().__init__([], intents=discord.Intents.default())
 
         self.activity = discord.Game('Pokémon')
         self.allowed_mentions = discord.AllowedMentions.none()
