@@ -61,6 +61,9 @@ class Presentation:
         :param detailed: Whether to add lots of details to the embed.
         :return: The embed.
         """
+        if character.restricted:
+            raise ValueError('Restricted characters may not be embedded')
+
         if character.flavour_text:
             description = f'>>> *{character.flavour_text.plain_text}*'
         else:
