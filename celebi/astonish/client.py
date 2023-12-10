@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import logging
 import re
+from contextlib import suppress
 from typing import TYPE_CHECKING, Any, AnyStr, NamedTuple, Self
 
 import aiohttp
@@ -25,6 +27,8 @@ if TYPE_CHECKING:
 
 __all__ = ['AstonishClient']
 
+logger = logging.getLogger(__name__)
+
 
 class LoginFailedError(Exception):
     """Indicates a failure to successfully login to the forum."""
@@ -44,12 +48,35 @@ class AstonishClient:
         self.username = username
         self.password = password
 
+        self.character_cache: dict[int, Character] = {}
+
         # Initialized in __aenter__ where we have a running event loop
         self.session: aiohttp.ClientSession
 
     async def __aenter__(self) -> Self:
         self.session = aiohttp.ClientSession(self.base_url)
+
+        # Login to the forum
         await self.login()
+
+        logger.info('Building initial character cache...')
+
+        # Concurrently add all characters to the cache
+        for fut in asyncio.as_completed(
+            self.get_character(id) for id in await self.get_all_characters()
+        ):
+            try:
+                chara = await fut
+            except BaseException:
+                logger.exception('Unable to add character to cache')
+            else:
+                self._update_in_cache(chara)
+
+        logger.info(
+            'Character cache built: %d valid characters stored',
+            len(self.character_cache),
+        )
+
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
@@ -81,7 +108,24 @@ class AstonishClient:
             if 'member_id' not in response.cookies:
                 raise LoginFailedError('Response did not set expected cookie')
 
-    async def get_character(self, memberid: int) -> Character:
+    async def get_character(
+        self,
+        memberid: int,
+        *,
+        cached: bool = False,
+    ) -> Character:
+        """
+        Get an ASTONISH character.
+
+        :param memberid: The Jcink member ID to lookup.
+        :param cached: Whether to return the cached character, if present.
+        :raises ValueError: When the member ID does not exist.
+        :return: The requested character.
+        """
+        if cached:
+            with suppress(KeyError):
+                return self.character_cache[memberid]
+
         try:
             # Fetch the Mod CP data and profile data concurrently
             async with asyncio.TaskGroup() as tg:
@@ -96,10 +140,12 @@ class AstonishClient:
 
         assert synthetic['id'] == memberid, 'Member ID does not match'
 
-        return Character.model_validate(
+        chara = Character.model_validate(
             {**form, **synthetic},
             from_attributes=False,
         )
+        self._update_in_cache(chara)
+        return chara
 
     async def get_character_group(self, memberid: int) -> str:
         """
@@ -230,6 +276,9 @@ class AstonishClient:
     def _has_session_cookies(self) -> bool:
         cookies = self.session.cookie_jar.filter_cookies(self.base_url)
         return ('session_id' in cookies) and ('pass_hash' in cookies)
+
+    def _update_in_cache(self, chara: Character) -> None:
+        self.character_cache[chara.id] = chara
 
     @staticmethod
     def _is_logged_in(markup: AnyStr, /) -> bool:
