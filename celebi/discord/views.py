@@ -181,15 +181,14 @@ class ConfirmationView(discord.ui.View):
         # Ensure the view is ephemeral unless otherwise requested
         kwargs.setdefault('ephemeral', True)
 
-        view = cls(original_interaction, timeout=timeout)
+        view = kwargs['view'] = cls(original_interaction, timeout=timeout)
 
         # Send the followup if necessary, otherwise the initial response
         if original_interaction.response.is_done():
-            send = original_interaction.followup.send
+            await original_interaction.followup.send(*args, **kwargs)
         else:
-            send = original_interaction.response.send_message
+            await original_interaction.response.send_message(*args, **kwargs)
 
-        await send(*args, **kwargs, view=view)
         return await view.wait_for_result()
 
     @discord.ui.button(label='Cancel', style=ButtonStyle.danger)

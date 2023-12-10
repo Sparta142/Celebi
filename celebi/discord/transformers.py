@@ -59,6 +59,8 @@ class PokemonTransformer(Transformer):
         interaction: CelebiInteraction,
         value: Any,
     ) -> aiopoke.Pokemon:
+        name_or_id: int | str
+
         try:
             name_or_id = int(value)
         except ValueError:
@@ -150,7 +152,8 @@ class CharacterTransformer(Transformer):
                 raise CharacterNotFoundError(msg)
 
             # Otherwise, the best-matching member ID is the 3rd tuple element
-            memberid: int = extraction[2]
+            memberid = extraction[2]
+            assert isinstance(memberid, int)
 
         ac = interaction.client.astonish_client
 
