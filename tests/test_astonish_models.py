@@ -1,6 +1,7 @@
 import lxml.html
 
 from celebi.astonish.models import MemberCard, PersonalComputer
+from celebi.astonish.shop import AstonishShop, PokemonType, Region
 
 from . import DATA_DIRECTORY
 
@@ -92,3 +93,186 @@ class TestPersonalComputer:
         assert pc[8].shiny
 
         _ = pc.model_dump_html()
+
+
+class TestShop:
+    def test_parse_html(self):
+        with open(
+            DATA_DIRECTORY / 'shop.html',
+            'rt',
+            encoding='utf-8',
+        ) as f:
+            doc = lxml.html.document_fromstring(f.read())
+
+        shop = AstonishShop.parse_html(doc)
+
+        _ = hash(shop)  # Check that it's hashable
+
+        assert len(shop.regions) == 4
+
+        assert shop.regions[0].name == 'Lythra'
+        assert shop.regions[0].types == {
+            PokemonType(name='normal', rare=False),
+            PokemonType(name='grass', rare=False),
+            PokemonType(name='bug', rare=False),
+            PokemonType(name='electric', rare=False),
+            PokemonType(name='poison', rare=False),
+            PokemonType(name='ghost', rare=True),
+            PokemonType(name='dark', rare=True),
+            PokemonType(name='water', rare=True),
+            PokemonType(name='psychic', rare=True),
+        }
+
+        assert shop.regions[1].name == 'Callitris'
+        assert shop.regions[1].types == {
+            PokemonType(name='normal', rare=False),
+            PokemonType(name='ice', rare=False),
+            PokemonType(name='ghost', rare=False),
+            PokemonType(name='steel', rare=False),
+            PokemonType(name='water', rare=True),
+            PokemonType(name='grass', rare=True),
+            PokemonType(name='dark', rare=True),
+            PokemonType(name='psychic', rare=True),
+        }
+
+        assert shop.regions[2].name == 'Parrya'
+        assert shop.regions[2].types == {
+            PokemonType(name='normal', rare=False),
+            PokemonType(name='fire', rare=False),
+            PokemonType(name='fighting', rare=False),
+            PokemonType(name='rock', rare=False),
+            PokemonType(name='dark', rare=False),
+            PokemonType(name='ground', rare=True),
+            PokemonType(name='flying', rare=True),
+            PokemonType(name='ghost', rare=True),
+            PokemonType(name='electric', rare=True),
+        }
+
+        assert shop.regions[3].name == 'Ilex'
+        assert shop.regions[3].types == {
+            PokemonType(name='normal', rare=False),
+            PokemonType(name='water', rare=False),
+            PokemonType(name='flying', rare=False),
+            PokemonType(name='ground', rare=False),
+            PokemonType(name='bug', rare=False),
+            PokemonType(name='fire', rare=True),
+            PokemonType(name='steel', rare=True),
+            PokemonType(name='grass', rare=True),
+            PokemonType(name='psychic', rare=True),
+        }
+
+        assert shop.baby_pokemon == {
+            'pichu',
+            'tyrogue',
+            'smoochum',
+            'elekid',
+            'magby',
+            'wyanut',
+            'budew',
+            'chinglin',
+            'bonsly',
+            'happiny',
+            'munchlax',
+            'riolu',
+            'toxel',
+        }
+
+        assert shop.stage_1_starters == {
+            'bulbasaur',
+            'charmander',
+            'squirtle',
+            'chikorita',
+            'cyndaquil',
+            'totodile',
+            'treecko',
+            'torchic',
+            'mudkip',
+            'turtwig',
+            'chimchar',
+            'piplup',
+            'snivy',
+            'tepig',
+            'oshawott',
+            'chespin',
+            'fennekin',
+            'froakie',
+            'rowlet',
+            'litten',
+            'popplio',
+            'grookey',
+            'scorbunny',
+            'sobble',
+            'sprigatito',
+            'fuecoco',
+            'quaxly',
+        }
+
+        assert shop.stage_2_starters == {
+            'ivysaur',
+            'charmeleon',
+            'wartortle',
+            'bayleef',
+            'quilava',
+            'croconaw',
+            'grovyle',
+            'combusken',
+            'marshtomp',
+            'grotle',
+            'monferno',
+            'prinplup',
+            'servine',
+            'pignite',
+            'dewott',
+            'quilladin',
+            'braixen',
+            'frogadier',
+            'dartrix',
+            'torracat',
+            'brionne',
+            'thwackey',
+            'raboot',
+            'drizzile',
+            'floragato',
+            'crocalor',
+            'quaxwell',
+        }
+
+        assert shop.stage_3_starters == {
+            'venusaur',
+            'charizard',
+            'blastoise',
+            'meganium',
+            'typhlosion',
+            'feraligatr',
+            'sceptile',
+            'blaziken',
+            'swampert',
+            'torterra',
+            'infernape',
+            'empoleon',
+            'serperior',
+            'emboar',
+            'samurott',
+            'chesnaught',
+            'delphox',
+            'greninja',
+            'decidueye',
+            'incineroar',
+            'rillaboom',
+            'cinderace',
+            'inteleon',
+            'meowscarada',
+            'skeledirge',
+            'quaquaval',
+        }
+
+    def test_pokemon_type_is_hashable(self):
+        _ = hash(PokemonType(name='test'))
+
+    def test_region_is_hashable(self):
+        _ = hash(
+            Region(
+                name='test',
+                types=frozenset({PokemonType(name='test')}),
+            )
+        )

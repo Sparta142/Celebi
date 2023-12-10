@@ -20,6 +20,7 @@ from celebi.astonish.models import (
     ItemStack,
     MemberCard,
 )
+from celebi.astonish.shop import AstonishShop
 
 if TYPE_CHECKING:
     from aiohttp.typedefs import StrOrURL
@@ -229,6 +230,18 @@ class AstonishClient:
             members[card.id] = card
 
         return members
+
+    async def get_shop_data(self) -> AstonishShop:
+        markup = await self.get(
+            login=False,
+            params={
+                'act': 'store',
+                'code': 'shop',
+                'category': 5,
+            },
+        )
+        doc = lxml.html.document_fromstring(markup)
+        return AstonishShop.parse_html(doc)
 
     async def _get_modcp_fields(self, memberid: int) -> _ModCPFields:
         markup = await self.get(
