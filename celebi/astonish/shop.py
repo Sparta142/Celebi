@@ -1,7 +1,7 @@
 from __future__ import annotations as _annotations
 
 import re
-from enum import Enum
+from enum import IntEnum
 from typing import TYPE_CHECKING, ClassVar, Self
 
 import lxml.html
@@ -94,9 +94,9 @@ class Region(FrozenBaseModel):
         return cls(name=title.text_content(), types=types)
 
 
-class Rarity(Enum):
-    COMMON = 'Common'
-    RARE = 'Rare'
+class Rarity(IntEnum):
+    COMMON = 0
+    RARE = 1
 
 
 class PokemonType(FrozenBaseModel):
