@@ -1,11 +1,12 @@
 from __future__ import annotations as _annotations
 
 import re
+from enum import Enum
 from typing import TYPE_CHECKING, ClassVar, Self
 
 import lxml.html
 from pydantic import BaseModel as _BaseModel
-from pydantic import ConfigDict, StrictBool, StrictStr
+from pydantic import ConfigDict, StrictStr
 
 __all__ = [
     'AstonishShop',
@@ -93,9 +94,14 @@ class Region(FrozenBaseModel):
         return cls(name=title.text_content(), types=types)
 
 
+class Rarity(Enum):
+    COMMON = 'Common'
+    RARE = 'Rare'
+
+
 class PokemonType(FrozenBaseModel):
     name: StrictStr
-    rare: StrictBool = False
+    rarity: Rarity = Rarity.COMMON
 
     _rare_suffix: ClassVar[str] = '*'
     """The suffix a rare Pokemon type has when displayed on the website."""
@@ -106,9 +112,11 @@ class PokemonType(FrozenBaseModel):
             raise ValueError('Name must not be empty or missing')
 
         name = name.strip().lower()
+        rare = name.endswith(cls._rare_suffix)
+
         return cls(
             name=name.removesuffix(cls._rare_suffix),
-            rare=name.endswith(cls._rare_suffix),
+            rarity=Rarity.RARE if rare else Rarity.COMMON,
         )
 
     if TYPE_CHECKING:
