@@ -1,7 +1,8 @@
 import lxml.html
+from frozendict import frozendict
 
 from celebi.astonish.models import MemberCard, PersonalComputer
-from celebi.astonish.shop import AstonishShop, PokemonType, Rarity, Region
+from celebi.astonish.shop import AstonishShop, Rarity, Region, _PokemonType
 
 from . import DATA_DIRECTORY
 
@@ -112,53 +113,53 @@ class TestShop:
 
         assert shop.regions[0].name == 'Lythra'
         assert shop.regions[0].types == {
-            PokemonType(name='normal', rarity=Rarity.COMMON),
-            PokemonType(name='grass', rarity=Rarity.COMMON),
-            PokemonType(name='bug', rarity=Rarity.COMMON),
-            PokemonType(name='electric', rarity=Rarity.COMMON),
-            PokemonType(name='poison', rarity=Rarity.COMMON),
-            PokemonType(name='ghost', rarity=Rarity.RARE),
-            PokemonType(name='dark', rarity=Rarity.RARE),
-            PokemonType(name='water', rarity=Rarity.RARE),
-            PokemonType(name='psychic', rarity=Rarity.RARE),
+            'normal': Rarity.COMMON,
+            'grass': Rarity.COMMON,
+            'bug': Rarity.COMMON,
+            'electric': Rarity.COMMON,
+            'poison': Rarity.COMMON,
+            'ghost': Rarity.RARE,
+            'dark': Rarity.RARE,
+            'water': Rarity.RARE,
+            'psychic': Rarity.RARE,
         }
 
         assert shop.regions[1].name == 'Callitris'
         assert shop.regions[1].types == {
-            PokemonType(name='normal', rarity=Rarity.COMMON),
-            PokemonType(name='ice', rarity=Rarity.COMMON),
-            PokemonType(name='ghost', rarity=Rarity.COMMON),
-            PokemonType(name='steel', rarity=Rarity.COMMON),
-            PokemonType(name='water', rarity=Rarity.RARE),
-            PokemonType(name='grass', rarity=Rarity.RARE),
-            PokemonType(name='dark', rarity=Rarity.RARE),
-            PokemonType(name='psychic', rarity=Rarity.RARE),
+            'normal': Rarity.COMMON,
+            'ice': Rarity.COMMON,
+            'ghost': Rarity.COMMON,
+            'steel': Rarity.COMMON,
+            'water': Rarity.RARE,
+            'grass': Rarity.RARE,
+            'dark': Rarity.RARE,
+            'psychic': Rarity.RARE,
         }
 
         assert shop.regions[2].name == 'Parrya'
         assert shop.regions[2].types == {
-            PokemonType(name='normal', rarity=Rarity.COMMON),
-            PokemonType(name='fire', rarity=Rarity.COMMON),
-            PokemonType(name='fighting', rarity=Rarity.COMMON),
-            PokemonType(name='rock', rarity=Rarity.COMMON),
-            PokemonType(name='dark', rarity=Rarity.COMMON),
-            PokemonType(name='ground', rarity=Rarity.RARE),
-            PokemonType(name='flying', rarity=Rarity.RARE),
-            PokemonType(name='ghost', rarity=Rarity.RARE),
-            PokemonType(name='electric', rarity=Rarity.RARE),
+            'normal': Rarity.COMMON,
+            'fire': Rarity.COMMON,
+            'fighting': Rarity.COMMON,
+            'rock': Rarity.COMMON,
+            'dark': Rarity.COMMON,
+            'ground': Rarity.RARE,
+            'flying': Rarity.RARE,
+            'ghost': Rarity.RARE,
+            'electric': Rarity.RARE,
         }
 
         assert shop.regions[3].name == 'Ilex'
         assert shop.regions[3].types == {
-            PokemonType(name='normal', rarity=Rarity.COMMON),
-            PokemonType(name='water', rarity=Rarity.COMMON),
-            PokemonType(name='flying', rarity=Rarity.COMMON),
-            PokemonType(name='ground', rarity=Rarity.COMMON),
-            PokemonType(name='bug', rarity=Rarity.COMMON),
-            PokemonType(name='fire', rarity=Rarity.RARE),
-            PokemonType(name='steel', rarity=Rarity.RARE),
-            PokemonType(name='grass', rarity=Rarity.RARE),
-            PokemonType(name='psychic', rarity=Rarity.RARE),
+            'normal': Rarity.COMMON,
+            'water': Rarity.COMMON,
+            'flying': Rarity.COMMON,
+            'ground': Rarity.COMMON,
+            'bug': Rarity.COMMON,
+            'fire': Rarity.RARE,
+            'steel': Rarity.RARE,
+            'grass': Rarity.RARE,
+            'psychic': Rarity.RARE,
         }
 
         assert shop.baby_pokemon == {
@@ -267,12 +268,12 @@ class TestShop:
         }
 
     def test_pokemon_type_is_hashable(self):
-        _ = hash(PokemonType(name='test'))
+        _ = hash(_PokemonType(name='test'))
 
     def test_region_is_hashable(self):
         _ = hash(
             Region(
                 name='test',
-                types=frozenset({PokemonType(name='test')}),
+                types=frozendict({'test': Rarity.COMMON}),
             )
         )

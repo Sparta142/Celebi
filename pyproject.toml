@@ -18,6 +18,7 @@ backoff = "^2.2.1"
 beautifulsoup4 = "^4.12.2"
 cssselect = "^1.2.0"
 "discord.py" = { version = "^2.3", extras = ["speed"] }
+frozendict = "^2.3.10"
 lxml = "^4.9.3"
 pydantic = "^2.4.2"
 python = "^3.12"
