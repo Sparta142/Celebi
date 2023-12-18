@@ -1,3 +1,6 @@
+from __future__ import annotations as _annotations
+
+import collections
 import logging
 import random
 from contextlib import suppress
@@ -13,6 +16,7 @@ from celebi.utils import pokemon_name, translate, translate_first
 
 if TYPE_CHECKING:
     from celebi.astonish.client import AstonishClient
+    from celebi.astonish.shop import AstonishShop
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +53,8 @@ class Presentation:
         self.config = config
         self.guild = guild
         self.astonish_client = astonish_client
+
+        self._shop_data: AstonishShop | None = None
 
     @property
     def language(self) -> str:
@@ -208,10 +214,39 @@ class Presentation:
                     )
                     embed.add_field(name='Type', value=value)
 
+            # Steal the AiopokeClient # TODO: This is stupid
+            client = pkmn.species.client
+            assert client is not None
+
+            from_ids, to_ids = await self._evolution_graph(species)
+            evolves_from = [
+                await client.get_pokemon_species(sid)
+                for sid in from_ids
+                if sid != pkmn.id
+            ]
+            evolves_to = [
+                await client.get_pokemon_species(sid)
+                for sid in to_ids
+                if sid != pkmn.id
+            ]
+
             # Add various other fields
-            embed.add_field(name='Rarity', value='???')  # TODO
-            embed.add_field(name='Evolution', value='???')  # TODO
-            embed.add_field(name='Location', value='???', inline=False)  # TODO
+            # embed.add_field(name='Rarity', value='???')  # TODO
+
+            if evolves_from:
+                names = sorted(pokemon_name(None, sp) for sp in evolves_from)
+                embed.add_field(name='Evolves from', value=', '.join(names))
+
+            if evolves_to:
+                names = sorted(pokemon_name(None, sp) for sp in evolves_to)
+                embed.add_field(name='Evolves to', value=', '.join(names))
+
+            embed.add_field(
+                name='Location',
+                value=', '.join(await self.pokemon_locations(pkmn)),
+                inline=False,
+            )
+
             embed.add_field(name='Weight', value=self.weight(pkmn.weight / 10))
             embed.add_field(name='Height', value=self.height(pkmn.height / 10))
 
@@ -287,6 +322,58 @@ class Presentation:
                 return sprite.url
 
         return None
+
+    @staticmethod
+    async def _evolution_graph(
+        species: PokemonSpecies,
+    ) -> tuple[list[int], list[int]]:
+        import networkx as nx
+
+        evolution_chain = await species.evolution_chain.fetch()
+
+        links = collections.deque([evolution_chain.chain])
+        graph = nx.DiGraph()
+
+        while links:
+            link = links.popleft()
+
+            for et in link.evolves_to:
+                graph.add_edge(link.species.id, et.species.id)
+                links.append(et)
+
+        try:
+            evolves_from = [sid for sid, _ in graph.in_edges(species.id)]
+        except nx.NetworkXError:
+            evolves_from = []
+
+        try:
+            evolves_to = [sid for sid, _ in graph.out_edges(species.id)]
+        except nx.NetworkXError:
+            evolves_to = []
+
+        return evolves_from, evolves_to
+
+    # TODO: Move to another class and consider caching
+    # TODO: Take banned Pokemon into account
+    async def pokemon_locations(self, pkmn: Pokemon) -> list[str]:
+        shop = await self.shop_data()
+
+        # A Pokemon is part of a region if it shares at least
+        # one type with that region (regardless of rarity).
+        return sorted(
+            [
+                region.name
+                for region in shop.regions
+                if any(region.contains_type(pt.type.name) for pt in pkmn.types)
+            ]
+        )
+
+    # TODO: Probably don't cache this here
+    async def shop_data(self) -> AstonishShop:
+        if self._shop_data is None:
+            self._shop_data = await self.astonish_client.get_shop_data()
+
+        return self._shop_data
 
 
 def sanitize_text(string: str, /) -> str:
