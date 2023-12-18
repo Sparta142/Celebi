@@ -46,7 +46,11 @@ class CelebiClient(Bot):
         if self._presentation is None:
             guild = self.get_guild(GUILD.id)
             assert guild is not None
-            self._presentation = Presentation(self.config.presentation, guild)
+            self._presentation = Presentation(
+                self.config.presentation,
+                guild,
+                self.astonish_client,
+            )
 
         return self._presentation
 

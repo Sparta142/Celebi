@@ -1,6 +1,6 @@
 import logging
 import random
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 import discord
 from aiopoke import Pokemon, PokemonSpecies
@@ -9,6 +9,9 @@ from yarl import URL
 
 from celebi.astonish.models import Character, ItemStack
 from celebi.utils import pokemon_name, translate, translate_first
+
+if TYPE_CHECKING:
+    from celebi.astonish.client import AstonishClient
 
 logger = logging.getLogger(__name__)
 
@@ -40,9 +43,11 @@ class Presentation:
         self,
         config: PresentationConfig,
         guild: discord.Guild,
+        astonish_client: AstonishClient,
     ) -> None:
         self.config = config
         self.guild = guild
+        self.astonish_client = astonish_client
 
     @property
     def language(self) -> str:
