@@ -114,4 +114,7 @@ def rewrap_exception(
     try:
         yield
     except from_type as e:
-        raise to_type(*e.args) from None
+        if type(e) != from_type:  # Must be an exact type match (no subclasses)
+            raise
+
+        raise to_type(*e.args) from e
