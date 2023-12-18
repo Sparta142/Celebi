@@ -1,5 +1,6 @@
 import logging
 import random
+from contextlib import suppress
 from typing import TYPE_CHECKING, Annotated
 
 import discord
@@ -215,17 +216,8 @@ class Presentation:
             embed.add_field(name='Height', value=self.height(pkmn.height / 10))
 
         # Add the Pokemon sprite as a thumbnail, if available
-        sprites = pkmn.sprites.other
-
-        if sprites:
-            if shiny:
-                embed.set_thumbnail(
-                    url=sprites.official_artwork_front_shiny.url
-                )
-            else:
-                embed.set_thumbnail(
-                    url=sprites.official_artwork_front_default.url
-                )
+        if thumbnail_url := self.sprite(pkmn, shiny):
+            embed.set_thumbnail(url=thumbnail_url)
 
         embed.set_author(
             name='PokéAPI',
@@ -275,6 +267,26 @@ class Presentation:
             feet=feet,
             inches=inches,
         )
+
+    @staticmethod
+    def sprite(pkmn: Pokemon, shiny: bool):
+        other = pkmn.sprites.other
+        if not other:
+            return None
+
+        sprites = [
+            other.official_artwork_front_default,
+            other.official_artwork_front_shiny,
+        ]
+
+        if shiny:
+            sprites.reverse()
+
+        for sprite in sprites:
+            with suppress(AttributeError):  # `url` can be undefined
+                return sprite.url
+
+        return None
 
 
 def sanitize_text(string: str, /) -> str:
