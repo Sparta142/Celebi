@@ -1,14 +1,14 @@
 from __future__ import annotations as _annotations
 
 import logging
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
 
 import discord
-from discord import app_commands, ui
-from discord.ext.commands import Cog
-from yarl import URL
+from discord import app_commands
 
-from celebi.astonish.models import PersonalComputer, Pokemon
+from celebi.astonish.models import Character, PersonalComputer, Pokemon
+from celebi.astonish.shop import AstonishShop
+from celebi.discord.cog import BaseCog
 from celebi.discord.transformers import TransformCharacter, TransformPokemon
 from celebi.discord.views import ConfirmationView, EmbedMenu
 from celebi.utils import pokemon_name
@@ -24,16 +24,12 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class AstonishCog(Cog):
+class AstonishCog(BaseCog['CelebiClient']):
     def __init__(self, bot: CelebiClient) -> None:
-        self.bot = bot
+        super().__init__(bot)
 
-        # https://github.com/Rapptz/discord.py/issues/7823
-        self._link_profile_menu = app_commands.ContextMenu(
-            name='Link Jcink profile',
-            callback=self.link_profile,
-        )
-        self.bot.tree.add_command(self._link_profile_menu)
+        # Initialized in .cog_load()
+        self._shop: AstonishShop
 
     @property
     def poke_client(self) -> AiopokeClient:
@@ -47,11 +43,17 @@ class AstonishCog(Cog):
     def astonish_client(self) -> AstonishClient:
         return self.bot.astonish_client
 
-    async def cog_unload(self) -> None:
-        # https://github.com/Rapptz/discord.py/issues/7823
-        self.bot.tree.remove_command(
-            self._link_profile_menu.name,
-            type=self._link_profile_menu.type,
+    async def cog_load(self) -> None:
+        # Load data from the forum's IBStore
+        self._shop = await self.astonish_client.get_shop_data()
+        logger.info(
+            'Shop data loaded successfully: %d regions, %d baby pokemon, '
+            '%d S1 starters, %d S2 starters, %d S3 starters found',
+            len(self._shop.regions),
+            len(self._shop.baby_pokemon),
+            len(self._shop.stage_1_starters),
+            len(self._shop.stage_2_starters),
+            len(self._shop.stage_3_starters),
         )
 
     @app_commands.command()
@@ -169,15 +171,56 @@ class AstonishCog(Cog):
 
         await interaction.response.send_message(content, embeds=embeds[:10])
 
+    @app_commands.command()
     @app_commands.default_permissions(administrator=True)
     @app_commands.guild_only()
-    async def link_profile(
+    @app_commands.rename(chara='character')
+    async def register(
         self,
         interaction: CelebiInteraction,
-        member_to_link: discord.Member,
+        user: discord.User,
+        chara: TransformCharacter,
     ) -> None:
-        modal = LinkProfileModal(member_to_link, self.astonish_client)
-        await interaction.response.send_modal(modal)
+        """
+        Links a Discord user to a Jcink character.
+
+        :param user: The Discord user who owns the character.
+        :param chara: The Jcink character to link to.
+        """
+        embed = self.presentation.embed_character(chara, detailed=False)
+        continuation = await ConfirmationView.display(
+            interaction,
+            (
+                f"You're about to set {chara.markdown()}'s "
+                f'Discord user to {user.mention}. Is this correct?'
+            ),
+            embed=embed,
+        )
+
+        if not continuation:
+            return
+
+        # Do the linking
+        try:
+            chara.extra.discord_id = user.id
+            await self.astonish_client.update_character(chara)
+        except Exception:
+            await continuation.response.send_message(
+                f'Failed to link Jcink profile #{chara.id}. '
+                'More info may be available in the bot logs.',
+                ephemeral=True,
+            )
+            logger.exception('Failed to link Jcink profile')
+        else:
+            await continuation.response.send_message(
+                f'Linked {chara.markdown()} to {user.mention}!',
+                ephemeral=True,
+            )
+            logger.info(
+                'Linked profile %r to Discord user %r',
+                chara.username,
+                str(user),
+            )
 
     @app_commands.command()
     @app_commands.default_permissions(administrator=True)
@@ -367,85 +410,52 @@ class AstonishCog(Cog):
             embed=pkmn_embed,
         )
 
-
-class LinkProfileModal(ui.Modal, title='Link Jcink profile'):
-    """
-    A modal that is displayed to walk the user through linking
-    a :class:`discord.Member` to an ASTONISH (Jcink-hosted) profile.
-    """
-
-    url: ui.TextInput = ui.TextInput(
-        label='Profile page',
-        placeholder='https://astonish.jcink.net/index.php?showuser=173',
-    )
-
-    _bad_input_message: ClassVar[str] = (
-        'The provided link is not a valid ASTONISH profile URL. '
-        'No changes have been made. Please try again.'
-    )
-    """
-    The message to display when profile linkage
-    fails due to improper user input.
-    """
-
-    def __init__(
+    @app_commands.command()
+    @app_commands.guild_only()
+    async def lookup(
         self,
-        member_to_link: discord.Member,
-        astonish_client: AstonishClient,
+        interaction: CelebiInteraction,
+        member: discord.Member | None = None,
     ) -> None:
-        super().__init__()
-        self.member_to_link = member_to_link
-        self.astonish_client = astonish_client
+        """
+        Shows the characters linked to a Discord member.
 
-    async def on_submit(self, interaction: CelebiInteraction) -> None:  # type: ignore[override]
-        await interaction.response.defer(ephemeral=True, thinking=True)
+        :param member: The member whose characters to show. If not given, shows your characters.
+        """
 
-        # Parse it as a URL
-        try:
-            profile_url = URL(self.url.value)
-            memberid = int(profile_url.query['showuser'])
-        except Exception:
-            logger.warning('Jcink profile linkage failed', exc_info=True)
-            await interaction.followup.send(
-                self._bad_input_message,
+        # Fallback to showing the command user's characters
+        if member is None:
+            assert isinstance(interaction.user, discord.Member)
+            member = interaction.user
+
+        # Build a list of the member's non-restricted characters, sorted by ID
+        charas = sorted(self._user_characters(member), key=lambda c: c.id)
+        count = len(charas)
+
+        # Send an ephemeral error message if the member has no characters
+        if not count:
+            await interaction.response.send_message(
+                f'{member.mention} has no characters linked to them.',
                 ephemeral=True,
             )
             return
 
-        # Make sure it's in the format we expect
-        if not (
-            profile_url.is_absolute()
-            and profile_url.host == 'astonish.jcink.net'
-            and profile_url.path == '/index.php'
-        ):
-            await interaction.followup.send(
-                self._bad_input_message,
-                ephemeral=True,
-            )
-            return
+        # Otherwise, send a paginated list view of that member's character(s)
+        view = CharacterListView(interaction.user, charas, self.presentation)
+        plural = 'character' if count == 1 else 'characters'
 
-        # Do the linking
-        try:
-            chara = await self.astonish_client.get_character(memberid)
-            chara.extra.discord_id = self.member_to_link.id
-            await self.astonish_client.update_character(chara)
-        except Exception:
-            await interaction.followup.send(
-                f'Failed to link Jcink profile #{memberid}. '
-                'More info may be available in the bot logs.',
-                ephemeral=True,
-            )
-            logger.exception('Failed to link Jcink profile')
-        else:
-            await interaction.followup.send(
-                f'Linked {chara.markdown()} to {self.member_to_link.mention}!',
-                ephemeral=True,
-            )
-            logger.info(
-                'Linked profile %r to Discord user %r',
-                chara.username,
-                str(self.member_to_link),
-            )
+        await interaction.response.send_message(
+            f'{member.mention} has {count} {plural} linked to them:',
+            view=view,
+            embed=await view.default_embed(),
+        )
+
+    def _user_characters(self, user: discord.User | discord.Member, /):
+        id = user.id
+
+        for chara in self.astonish_client.character_cache.values():
+            if chara.extra.discord_id == id and not chara.restricted:
+                yield chara
 
 
 class PokemonTeamView(EmbedMenu):
@@ -474,6 +484,28 @@ class PokemonTeamView(EmbedMenu):
         # If this individual Pokemon has a custom sprite configured, use it
         if pkmn.custom_sprite_url:
             embed.set_thumbnail(url=pkmn.custom_sprite_url)
+
+        # Add a position indicator to the footer
+        if not embed.footer:
+            embed.set_footer(text=f'{index + 1}/{self.count}')
+
+        return embed
+
+
+class CharacterListView(EmbedMenu):
+    def __init__(
+        self,
+        original_user: discord.User | discord.Member,
+        charas: list[Character],
+        presentation: Presentation,
+    ) -> None:
+        super().__init__(original_user, len(charas))
+
+        self.charas = charas
+        self.presentation = presentation
+
+    async def create_embed(self, index: int, /) -> discord.Embed:
+        embed = self.presentation.embed_character(self.charas[index])
 
         # Add a position indicator to the footer
         if not embed.footer:
