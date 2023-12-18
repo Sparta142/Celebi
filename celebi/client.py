@@ -9,11 +9,9 @@ from discord import app_commands
 from discord.app_commands import CommandInvokeError, TransformerError
 from discord.ext.commands import Bot
 from pydantic import ValidationError
-from ruamel.yaml import YAML
 
 from celebi.astonish.client import AstonishClient
 from celebi.astonish.models import RestrictedCharacterError, UserMismatchError
-from celebi.config import Config
 from celebi.discord.transformers import (
     CharacterNotFoundError,
     PokemonNotFoundError,
@@ -28,13 +26,12 @@ ASTONISH_PASSWORD = os.environ['ASTONISH_PASSWORD']
 
 
 class CelebiClient(Bot):
-    def __init__(self, config: Config) -> None:
+    def __init__(self) -> None:
         super().__init__([], intents=discord.Intents.default())
 
         self.activity = discord.Game('Pokémon')
         self.allowed_mentions = discord.AllowedMentions.none()
 
-        self.config = config
         self._presentation: Presentation | None = None
 
         # Initialized in .setup_hook()
@@ -46,11 +43,7 @@ class CelebiClient(Bot):
         if self._presentation is None:
             guild = self.get_guild(GUILD.id)
             assert guild is not None
-            self._presentation = Presentation(
-                self.config.presentation,
-                guild,
-                self.astonish_client,
-            )
+            self._presentation = Presentation(guild, self.astonish_client)
 
         return self._presentation
 
@@ -99,17 +92,7 @@ class CelebiClient(Bot):
 
 
 CelebiInteraction = discord.Interaction[CelebiClient]
-
-
-# TODO: MOVE THIS
-def get_config():
-    yaml = YAML(typ='safe')
-
-    with open('config.yaml', 'rt') as f:
-        return Config.model_validate(yaml.load(f))
-
-
-client = CelebiClient(get_config())
+client = CelebiClient()
 
 
 # Global handler for errors that can be handled cleanly somehow

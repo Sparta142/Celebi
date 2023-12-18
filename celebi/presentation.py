@@ -4,11 +4,10 @@ import collections
 import logging
 import random
 from contextlib import suppress
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING
 
 import discord
 from aiopoke import Pokemon, PokemonSpecies
-from pydantic import BaseModel, PlainSerializer, PlainValidator, StrictStr
 from yarl import URL
 
 from celebi.astonish.models import Character, ItemStack
@@ -20,45 +19,41 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-Color = Annotated[
-    discord.Colour,
-    PlainValidator(discord.Colour),
-    PlainSerializer(lambda c: c.value),
-]
-
 _INCHES_PER_METER = 1000 / 25.4
 _INCHES_PER_FOOT = 12
 _POUNDS_PER_KILOGRAM = 1 / 0.45359237
 
 
-class PresentationConfig(BaseModel):
+class Presentation:
     language: str = 'en'
     """The PokeAPI language to use."""
 
-    colors: dict[str, Color]
+    colors = {
+        'red': discord.Color(0xF0476B),
+        'blue': discord.Color(0x3F8CEC),
+        'yellow': discord.Color(0xF1D261),
+        'green': discord.Color(0x3FBD71),
+        'black': discord.Color(0x595959),
+        'brown': discord.Color(0xB16D3B),
+        'purple': discord.Color(0xAB65BE),
+        'gray': discord.Color(0xA2A2A2),
+        'white': discord.Color(0xF3F3F3),
+        'pink': discord.Color(0xFB8BC8),
+    }
 
-    # Rules to apply when formatting Pokemon embeds
-    weight_format: StrictStr
-    height_format: StrictStr
-    shiny_format: StrictStr
+    height_format = '{feet:0.0f}' '{inches:02.0f}" ({meters:0.01f} m)'
+    weight_format = '{pounds:0.1f} lbs ({kilograms:0.01f} kg)'
+    shiny_format = '{0} (Shiny)'
 
-
-class Presentation:
     def __init__(
         self,
-        config: PresentationConfig,
         guild: discord.Guild,
         astonish_client: AstonishClient,
     ) -> None:
-        self.config = config
         self.guild = guild
         self.astonish_client = astonish_client
 
         self._shop_data: AstonishShop | None = None
-
-    @property
-    def language(self) -> str:
-        return self.config.language
 
     def embed_character(
         self,
@@ -163,7 +158,7 @@ class Presentation:
 
         # Reformat as shiny if necessary
         if shiny:
-            display_name = self.config.shiny_format.format(display_name)
+            display_name = self.shiny_format.format(display_name)
 
         # Randomly pick and translate a flavor text to display
         try:
@@ -275,13 +270,13 @@ class Presentation:
         return str(url)
 
     def pokedex_color(self, species: PokemonSpecies, /) -> discord.Color:
-        return self.config.colors[species.color.name]
+        return self.colors[species.color.name]
 
     def weight(self, kilograms: float, /) -> str:
         if kilograms < 0:
             raise ValueError('Weight must be non-negative')
 
-        return self.config.weight_format.format(
+        return self.weight_format.format(
             kilograms=kilograms,
             grams=kilograms / 1000,
             pounds=kilograms * _POUNDS_PER_KILOGRAM,
@@ -296,7 +291,7 @@ class Presentation:
             _INCHES_PER_FOOT,
         )
 
-        return self.config.height_format.format(
+        return self.height_format.format(
             meters=meters,
             centimeters=meters / 100,
             feet=feet,
