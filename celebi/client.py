@@ -137,7 +137,9 @@ async def on_error(
             )
             content = (
                 'Something went wrong while running your command. '
-                'Try again in a little while.'
+                'Try again in a little while.\n'
+                'If this keeps happening, please contact a staff member '
+                'for help.'
             )
 
     # We made it here so we must have a message to send
