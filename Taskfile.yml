@@ -1,0 +1,22 @@
+version: "3"
+
+tasks:
+  build:
+    desc: Builds the project as a tarball and a wheel.
+    cmd: poetry build {{.CLI_ARGS}}
+
+  build-image:
+    desc: Builds a Docker image for the project.
+    cmd: docker build --tag sparta142/celebi . {{.CLI_ARGS}}
+
+  check:
+    desc: Runs various tests and linters against the project.
+    cmds:
+      - poetry check --lock
+      - poetry run pytest --verbose
+      - poetry run ruff check ./celebi
+      - poetry run mypy ./celebi
+
+  act:
+    desc: Runs act (local GitHub Actions) on the project.
+    cmd: act --bind --rm --workflows=.github/workflows/test.yml {{.CLI_ARGS}}
