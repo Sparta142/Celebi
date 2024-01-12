@@ -16,21 +16,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install Poetry
+        run: pipx install poetry
+
       - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "${{ env.PYTHON_VERSION }}"
-          cache: pip
+          cache: poetry
 
-      - name: Set up Python environment
-        run: |
-          pip install poetry pytest-github-actions-annotate-failures==0.2.0
-          poetry install --no-interaction
-          poetry env use python${{ env.PYTHON_VERSION }}
+      - name: Install project
+        run: poetry install --with=dev --with=ci --no-interaction
 
       - name: Add problem matchers
-        run: |
-          echo "::add-matcher::.github/problem-matchers/mypy.json"
+        run: echo "::add-matcher::.github/problem-matchers/mypy.json"
 
       - name: Lint
         run: poetry run ruff check --output-format=github .
