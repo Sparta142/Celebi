@@ -1,0 +1,41 @@
+name: Test
+
+on: [push]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: "${{ env.PYTHON_VERSION }}"
+          cache: pip
+
+      - name: Set up Poetry
+        run: |
+          pip install poetry
+          poetry install --no-interaction
+          poetry env use python${{ env.PYTHON_VERSION }}
+
+      - name: Lint
+        run: poetry run ruff check --output-format=github .
+        if: always()
+
+      - name: Unit test
+        run: poetry run pytest --verbose
+        if: always()
+
+      - name: Type check
+        run: poetry run mypy celebi
+        if: always()
