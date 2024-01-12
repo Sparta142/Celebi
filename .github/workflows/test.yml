@@ -22,11 +22,15 @@ jobs:
           python-version: "${{ env.PYTHON_VERSION }}"
           cache: pip
 
-      - name: Set up Poetry
+      - name: Set up Python environment
         run: |
-          pip install poetry
+          pip install poetry pytest-github-actions-annotate-failures==0.2.0
           poetry install --no-interaction
           poetry env use python${{ env.PYTHON_VERSION }}
+
+      - name: Add problem matchers
+        run: |
+          echo "::add-matcher::.github/problem-matchers/mypy.json"
 
       - name: Lint
         run: poetry run ruff check --output-format=github .
