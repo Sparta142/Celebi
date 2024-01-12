@@ -5,11 +5,13 @@ from contextlib import contextmanager, suppress
 from typing import TYPE_CHECKING, Iterable, Iterator, Protocol, TypeVar
 
 import aiopoke
+import discord
 
 if TYPE_CHECKING:
     from _typeshed import SupportsAllComparisons
     from aiopoke import Language
     from aiopoke.utils import MinimalResource
+    from discord._types import ClientT
 
 logger = logging.getLogger(__name__)
 
@@ -118,3 +120,32 @@ def rewrap_exception(
             raise
 
         raise to_type(*e.args) from e
+
+
+async def respond(interaction: discord.Interaction, *args, **kwargs) -> None:
+    interaction = unwrap(interaction)
+
+    match interaction.response.type:
+        case None:
+            await interaction.response.send_message(*args, **kwargs)
+        case (
+            discord.InteractionResponseType.deferred_channel_message
+            | discord.InteractionResponseType.deferred_message_update
+        ):
+            await interaction.followup.send(*args, **kwargs)
+        case _:
+            raise ValueError('The interaction has already been responded')
+
+
+def unwrap(
+    interaction: discord.Interaction[ClientT],
+    /,
+) -> discord.Interaction[ClientT]:
+    # Traverse (using EAFP) the singly-linked list of
+    # interactions formed by the entries in the `extras` dict.
+    with suppress(KeyError):
+        while True:
+            interaction = interaction.extras['continuation']
+            assert isinstance(interaction, discord.Interaction)
+
+    return interaction

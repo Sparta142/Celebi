@@ -10,6 +10,7 @@ from discord.app_commands import CommandInvokeError, TransformerError
 from discord.ext.commands import Bot
 from pydantic import ValidationError
 
+from celebi import utils
 from celebi.astonish.client import AstonishClient
 from celebi.astonish.models import RestrictedCharacterError, UserMismatchError
 from celebi.discord.transformers import (
@@ -140,4 +141,4 @@ async def on_error(
             )
 
     # We made it here so we must have a message to send
-    await interaction.response.send_message(content, ephemeral=True)
+    await utils.respond(interaction, content, ephemeral=True)

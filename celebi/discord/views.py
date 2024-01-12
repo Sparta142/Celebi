@@ -4,6 +4,7 @@ from typing import final
 import discord
 from discord.enums import ButtonStyle
 
+from celebi import utils
 from celebi.utils import clamp
 
 __all__ = ['EmbedMenu']
@@ -183,12 +184,7 @@ class ConfirmationView(discord.ui.View):
 
         view = kwargs['view'] = cls(original_interaction, timeout=timeout)
 
-        # Send the followup if necessary, otherwise the initial response
-        if original_interaction.response.is_done():
-            await original_interaction.followup.send(*args, **kwargs)
-        else:
-            await original_interaction.response.send_message(*args, **kwargs)
-
+        await utils.respond(original_interaction, *args, **kwargs)
         return await view.wait_for_result()
 
     @discord.ui.button(label='Cancel', style=ButtonStyle.danger)
@@ -217,6 +213,11 @@ class ConfirmationView(discord.ui.View):
     ) -> None:
         self._value = value
         self._interaction = interaction
+
+        # To allow other code to find the latest interaction
+        # in a "conversation" of interactions.
+        self.original_interaction.extras['continuation'] = interaction
+
         await self.original_interaction.delete_original_response()
         self.stop()
 
