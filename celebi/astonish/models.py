@@ -1,6 +1,6 @@
 from enum import Enum, StrEnum
 from functools import cached_property
-from typing import Annotated, Any, ClassVar, Literal, Self
+from typing import Annotated, Any, Final, Literal, Self
 
 import discord
 import lxml.etree
@@ -61,7 +61,7 @@ class Pokemon(BaseModel):
     shiny: StrictBool = False
     custom_sprite_url: OptionalHttpUrl = None
 
-    _pkmn_id_attr: ClassVar[str] = 'data-pkmn-id'
+    _pkmn_id_attr: Final[str] = 'data-pkmn-id'
 
     @property
     def sprite_url(self) -> str:

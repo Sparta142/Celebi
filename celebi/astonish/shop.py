@@ -2,7 +2,7 @@ from __future__ import annotations as _annotations
 
 import re
 from enum import IntEnum
-from typing import ClassVar, Self
+from typing import Final, Self
 
 import lxml.html
 from frozendict import frozendict
@@ -114,7 +114,7 @@ class _PokemonType(FrozenBaseModel):
     name: StrictStr
     rarity: Rarity = Rarity.COMMON
 
-    _rare_suffix: ClassVar[str] = '*'
+    _rare_suffix: Final[str] = '*'
     """The suffix a rare Pokemon type has when displayed on the website."""
 
     @classmethod
