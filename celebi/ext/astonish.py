@@ -205,12 +205,14 @@ class AstonishCog(BaseCog['CelebiClient']):
         if not continuation:
             return
 
+        await continuation.response.defer(ephemeral=True)
+
         # Do the linking
         try:
             chara.extra.discord_id = member.id
             await self.astonish_client.update_character(chara)
         except Exception:
-            await continuation.response.send_message(
+            await continuation.followup.send(
                 f'Failed to link Jcink profile #{chara.id}. '
                 'More info may be available in the bot logs.',
                 ephemeral=True,
@@ -219,24 +221,27 @@ class AstonishCog(BaseCog['CelebiClient']):
             return
 
         # Add and remove roles
+        reason = f'{interaction.user} linked Jcink character {chara.username!r}'
         await member.add_roles(
             *get_roles_for_chara(chara, member.guild),
-            reason='Added role entitlements based on character registration',
+            reason=reason,
         )
         await member.remove_roles(
             *get_roles_to_remove(member.guild),
-            reason='Removed temporary roles due to character registration',
+            reason=reason,
+        )
+
+        logger.info(
+            '%r linked profile %r to Discord user %r',
+            interaction.user,
+            chara.username,
+            str(member),
         )
 
         # Send success message
-        await continuation.response.send_message(
-            f'Linked {chara.markdown()} to {member.mention}!',
+        await continuation.followup.send(
+            f'Successfully linked {chara.markdown()} to {member.mention}!',
             ephemeral=True,
-        )
-        logger.info(
-            'Linked profile %r to Discord user %r',
-            chara.username,
-            str(member),
         )
 
     @app_commands.command()
