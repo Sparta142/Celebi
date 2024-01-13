@@ -25,6 +25,8 @@ class _HasMinimalLanguage(Protocol):
 
 
 HasLanguage = _HasFullLanguage | _HasMinimalLanguage
+
+T = TypeVar('T')
 TTranslated = TypeVar('TTranslated', bound=HasLanguage)
 TComparable = TypeVar('TComparable', bound='SupportsAllComparisons')
 
@@ -149,3 +151,17 @@ def unwrap(
             assert isinstance(interaction, discord.Interaction)
 
     return interaction
+
+
+def must(x: T | None, /) -> T:
+    """
+    Raise an exception if `x` is `None`, otherwise return `x` unmodified.
+
+    :param x: The value to check for `None`-ness
+    :raises TypeError: If the provided value is `None`
+    :return: `x`
+    """
+    if x is None:
+        raise TypeError('Value must not be None')
+
+    return x

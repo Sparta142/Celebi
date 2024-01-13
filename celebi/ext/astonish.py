@@ -1,17 +1,23 @@
 from __future__ import annotations as _annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 import discord
 from discord import app_commands
 
-from celebi.astonish.models import Character, PersonalComputer, Pokemon
+from celebi.astonish.models import (
+    BloodType,
+    Character,
+    PersonalComputer,
+    Pokemon,
+    TrainerClass,
+)
 from celebi.astonish.shop import AstonishShop
 from celebi.discord.cog import BaseCog
 from celebi.discord.transformers import TransformCharacter, TransformPokemon
 from celebi.discord.views import ConfirmationView, EmbedMenu
-from celebi.utils import pokemon_name
+from celebi.utils import must, pokemon_name
 
 if TYPE_CHECKING:
     from aiopoke import AiopokeClient
@@ -177,13 +183,13 @@ class AstonishCog(BaseCog['CelebiClient']):
     async def register(
         self,
         interaction: CelebiInteraction,
-        user: discord.User,
+        member: discord.Member,
         chara: TransformCharacter,
     ) -> None:
         """
-        Links a Discord user to a Jcink character.
+        Links a Discord member to a Jcink character.
 
-        :param user: The Discord user who owns the character.
+        :param member: The Discord member who owns the character.
         :param chara: The Jcink character to link to.
         """
         embed = self.presentation.embed_character(chara, detailed=False)
@@ -191,7 +197,7 @@ class AstonishCog(BaseCog['CelebiClient']):
             interaction,
             (
                 f"You're about to set {chara.markdown()}'s "
-                f'Discord user to {user.mention}. Is this correct?'
+                f'Discord user to {member.mention}. Is this correct?'
             ),
             embed=embed,
         )
@@ -201,7 +207,7 @@ class AstonishCog(BaseCog['CelebiClient']):
 
         # Do the linking
         try:
-            chara.extra.discord_id = user.id
+            chara.extra.discord_id = member.id
             await self.astonish_client.update_character(chara)
         except Exception:
             await continuation.response.send_message(
@@ -210,16 +216,28 @@ class AstonishCog(BaseCog['CelebiClient']):
                 ephemeral=True,
             )
             logger.exception('Failed to link Jcink profile')
-        else:
-            await continuation.response.send_message(
-                f'Linked {chara.markdown()} to {user.mention}!',
-                ephemeral=True,
-            )
-            logger.info(
-                'Linked profile %r to Discord user %r',
-                chara.username,
-                str(user),
-            )
+            return
+
+        # Add and remove roles
+        await member.add_roles(
+            *get_roles_for_chara(chara, member.guild),
+            reason='Added role entitlements based on character registration',
+        )
+        await member.remove_roles(
+            *get_roles_to_remove(member.guild),
+            reason='Removed temporary roles due to character registration',
+        )
+
+        # Send success message
+        await continuation.response.send_message(
+            f'Linked {chara.markdown()} to {member.mention}!',
+            ephemeral=True,
+        )
+        logger.info(
+            'Linked profile %r to Discord user %r',
+            chara.username,
+            str(member),
+        )
 
     @app_commands.command()
     @app_commands.default_permissions(administrator=True)
@@ -511,6 +529,35 @@ class CharacterListView(EmbedMenu):
             embed.set_footer(text=f'{index + 1}/{self.count}')
 
         return embed
+
+
+# TODO: Move this somewhere else
+def get_roles_for_chara(chara: Character, guild: discord.Guild):
+    get = discord.utils.get
+    roles = guild.roles
+
+    role_map: Final = {
+        TrainerClass.STRATEGOS: must(get(roles, name='Strategos')),
+        TrainerClass.THIARCHOS: must(get(roles, name='Thiarchos')),
+        TrainerClass.KRISIGOS: must(get(roles, name='Krisigos')),
+        TrainerClass.MNEMNTIA: must(get(roles, name='Mnemntia')),
+        TrainerClass.SOPHIST: must(get(roles, name='Sophist')),
+        TrainerClass.NEREID: must(get(roles, name='Nereid')),
+    }
+
+    yield role_map[chara.trainer_class()]
+
+    if chara.inamorata_status:
+        yield must(get(roles, name='Inamorata'))
+
+    if chara.blood_type == BloodType.HEMITHEO:
+        yield must(get(roles, name='Hemitheos'))
+
+    yield must(get(roles, name='Members'))
+
+
+def get_roles_to_remove(guild: discord.Guild):
+    yield must(discord.utils.get(guild.roles, name='Guests'))
 
 
 async def setup(bot: CelebiClient) -> None:
