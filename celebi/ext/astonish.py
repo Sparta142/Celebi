@@ -20,7 +20,6 @@ if TYPE_CHECKING:
     from celebi.client import CelebiClient, CelebiInteraction
     from celebi.presentation import Presentation
 
-
 logger = logging.getLogger(__name__)
 
 

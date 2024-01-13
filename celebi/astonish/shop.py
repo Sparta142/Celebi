@@ -99,7 +99,10 @@ class Region(FrozenBaseModel):
 
             types[t.name] = t.rarity
 
-        return cls(name=title.text_content(), types=frozendict(types))
+        return cls(
+            name=title.text_content(),
+            types=frozendict(types),
+        )
 
     def contains_type(self, type: str) -> bool:
         return type in self.types
