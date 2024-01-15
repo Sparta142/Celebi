@@ -253,7 +253,7 @@ class AstonishCog(BaseCog['CelebiClient']):
         character: TransformCharacter,
     ) -> None:
         """
-        Shows the extra data attached to an ASTONISH character.
+        Shows the extra data attached to a Jcink character.
 
         :param character: The (partial) name or numeric ID of the character whose data to show.
         """
