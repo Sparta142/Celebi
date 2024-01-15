@@ -404,12 +404,44 @@ class ItemStack(BaseModel):
     description: StrictStr
     stock: PositiveInt
 
+    @classmethod
+    def parse_html(cls, element: lxml.html.HtmlElement) -> Self:
+        icon_td, name_td, description_td, stock_td = element.findall('td')
+        img = icon_td.find('img')
+
+        if img is None:
+            raise ValueError('Missing <img> tag for item icon')
+
+        return cls(
+            icon_url=img.attrib['src'],
+            name=name_td.text_content(),
+            description=description_td.text_content(),
+            stock=stock_td.text_content(),
+        )
+
 
 class Inventory(BaseModel):
     """Represents a character name and all items that character owns."""
 
     owner: StrictStr
-    items: list[ItemStack] = Field(default_factory=list, max_length=10)
+    items: list[ItemStack] = Field(default_factory=list)
+
+    @classmethod
+    def parse_html(cls, element: lxml.html.HtmlElement) -> Self:
+        (table,) = element.cssselect('#ucpcontent > table')
+        (owner,) = table.cssselect('tr:nth-child(1) > td:nth-child(2) > a')
+
+        trs = table.cssselect('tr')[3:]
+        items: list[ItemStack] = []
+
+        if trs[0].text_content().strip() != 'Inventory Empty.':
+            for tr in trs:
+                items.append(ItemStack.parse_html(tr))
+
+        return cls(
+            owner=owner.text_content(),
+            items=items,
+        )
 
     def __iter__(self):
         yield from self.items

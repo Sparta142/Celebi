@@ -10,14 +10,12 @@ from typing import TYPE_CHECKING, Any, AnyStr, NamedTuple, Self
 import aiohttp
 import backoff
 import lxml.html
-from bs4 import BeautifulSoup
 from yarl import URL
 
 from celebi.astonish.models import (
     Character,
     ElementNotFoundError,
     Inventory,
-    ItemStack,
     MemberCard,
 )
 from celebi.astonish.shop import AstonishShop
@@ -165,42 +163,16 @@ class AstonishClient:
         :param memberid: The Jcink member ID to lookup
         :return: The member's inventory
         """
-        params = {
-            'act': 'store',
-            'code': 'view_inventory',
-            'memberid': memberid,
-        }
-
-        async with self.session.get('/index.php', params=params) as response:
-            response.raise_for_status()
-            text = await response.text()
-
-        soup = BeautifulSoup(text, 'lxml')
-
-        # Get the inventory owner
-        owner = soup.select_one(
-            '#ucpcontent > table tr:nth-child(1) > td:nth-child(2) > a'
+        markup = await self.get(
+            params={
+                'act': 'store',
+                'code': 'view_inventory',
+                'memberid': memberid,
+            },
         )
-        if not owner:
-            raise ValueError('Inventory owner not found')
 
-        # Get all items
-        items: list[ItemStack] = []
-        trs = soup.select('#ucpcontent > table tr')[3:]
-
-        if trs[0].text.strip() != 'Inventory Empty.':
-            for tr in trs:
-                tds = tr.find_all('td', recursive=False)
-                items.append(
-                    ItemStack(
-                        icon_url=tds[0].find('img')['src'],
-                        name=tds[1].text,
-                        description=tds[2].text,
-                        stock=tds[3].text,
-                    )
-                )
-
-        return Inventory(owner=owner.text, items=items)
+        doc = lxml.html.document_fromstring(markup)
+        return Inventory.parse_html(doc)
 
     async def update_character(self, character: Character) -> None:
         form, synthetic = await self._get_modcp_fields(character.id)

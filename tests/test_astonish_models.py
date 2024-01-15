@@ -1,7 +1,12 @@
 import lxml.html
 from frozendict import frozendict
 
-from celebi.astonish.models import MemberCard, PersonalComputer
+from celebi.astonish.models import (
+    Inventory,
+    ItemStack,
+    MemberCard,
+    PersonalComputer,
+)
 from celebi.astonish.shop import AstonishShop, Rarity, Region, _PokemonType
 
 from . import DATA_DIRECTORY
@@ -277,3 +282,219 @@ class TestShop:
                 types=frozendict({'test': Rarity.COMMON}),
             )
         )
+
+
+class TestInventory:
+    def test_parse_html_inventory_empty(self):
+        inventory = self._read_inventory('inventory_empty.html')
+
+        assert inventory.owner == 'ASTONISH'
+        assert not inventory.items
+
+    def test_parse_html_inventory_few(self):
+        inventory = self._read_inventory('inventory_few.html')
+
+        assert inventory.owner == 'Abelone Athanasiou'
+        assert inventory.items == [
+            ItemStack(
+                icon_url='https://i.postimg.cc/zf06p5tP/hime.png',
+                name='Hemitheo Bloodline',
+                description='Create a new Hemitheo bloodline',
+                stock=1,
+            ),
+            ItemStack(
+                icon_url='https://i.postimg.cc/mhf5hrkh/ina.png',
+                name='Inamorata',
+                description='Give your character Inamorata status',
+                stock=1,
+            ),
+        ]
+
+    def test_parse_html_inventory_many(self):
+        inventory = self._read_inventory('inventory_many.html')
+
+        assert inventory.owner == 'habs'
+        assert inventory.items == [
+            ItemStack(
+                icon_url='https://i.postimg.cc/0y2yN5wV/callitris-baby.png',
+                name='Callitris (Baby)',
+                description='Lure to roll for a randomized baby Pokémon from the Callitris subregion.',
+                stock=1,
+            ),
+            ItemStack(
+                icon_url='https://i.postimg.cc/X7bLZmxZ/callitris-ev1.png',
+                name='Callitris (Evolution Stage 1)',
+                description='Lure to roll for a randomized first stage evolution Pokémon from the Callitris subregion.',
+                stock=1,
+            ),
+            ItemStack(
+                icon_url='https://i.postimg.cc/44SZsv1F/callitris-ev2.png',
+                name='Callitris (Evolution Stage 2)',
+                description='Lure to roll for a randomized second stage evolution Pokémon from the Callitris subregion.',
+                stock=1,
+            ),
+            ItemStack(
+                icon_url='https://i.postimg.cc/5NQJ0H79/callitris-ev3.png',
+                name='Callitris (Evolution Stage 3)',
+                description='Lure to roll for a randomized third stage evolution Pokémon from the Callitris subregion.',
+                stock=1,
+            ),
+            ItemStack(
+                icon_url='https://i.postimg.cc/zXhmNsvV/callitris-s-ev1.png',
+                name='Callitris Starter-type (Evolution Stage 1)',
+                description='Lure to roll for a randomized first stage evolution Starter-type Pokémon from the Callitris subregion.',
+                stock=1,
+            ),
+            ItemStack(
+                icon_url='https://i.postimg.cc/pV4NgW2w/callitris-s-ev2.png',
+                name='Callitris Starter-type (Evolution Stage 2)',
+                description='Lure to roll for a randomized second stage evolution Starter-type Pokémon from the Callitris subregion.',
+                stock=1,
+            ),
+            ItemStack(
+                icon_url='https://i.postimg.cc/VkPxkK04/callitris-s-ev3.png',
+                name='Callitris Starter-type (Evolution Stage 3)',
+                description='Lure to roll for a randomized third stage evolution Starter-type Pokémon from the Callitris subregion.',
+                stock=1,
+            ),
+            ItemStack(
+                icon_url='https://i.postimg.cc/hPKs3TpP/hemi-char.png',
+                name='Hemitheo Blood',
+                description='Create a new Hemitheo character',
+                stock=1,
+            ),
+            ItemStack(
+                icon_url='https://i.postimg.cc/zf06p5tP/hime.png',
+                name='Hemitheo Bloodline',
+                description='Create a new Hemitheo bloodline',
+                stock=1,
+            ),
+            ItemStack(
+                icon_url='https://i.postimg.cc/9fDXGx1T/ilex-baby.png',
+                name='Ilex (Baby)',
+                description='Lure to roll for a randomized baby Pokémon from the Ilex subregion.',
+                stock=1,
+            ),
+            ItemStack(
+                icon_url='https://i.postimg.cc/50rGdgMB/ilex-ev2.png',
+                name='Ilex (Evolution Stage 2)',
+                description='Lure to roll for a randomized second stage evolution Pokémon from the Illex subregion.',
+                stock=1,
+            ),
+            ItemStack(
+                icon_url='https://i.postimg.cc/QCWzX7XR/ilex-ev3.png',
+                name='Ilex (Evolution Stage 3)',
+                description='Lure to roll for a randomized third stage evolution Pokémon from the Illex subregion.',
+                stock=1,
+            ),
+            ItemStack(
+                icon_url='https://i.ibb.co/Q6q25VX/newilex1.png',
+                name='Ilex Starter-type (Evolution Stage 1)',
+                description='Lure to roll for a randomized first stage evolution Starter-type Pokémon from the Ilex subregion.',
+                stock=1,
+            ),
+            ItemStack(
+                icon_url='https://i.ibb.co/b6PpkZ3/newilex2.png',
+                name='Ilex Starter-type (Evolution Stage 2)',
+                description='Lure to roll for a randomized second stage evolution Starter-type Pokémon from the Ilex subregion.',
+                stock=1,
+            ),
+            ItemStack(
+                icon_url='https://i.ibb.co/zF1Nj2r/newilex3.png',
+                name='Ilex Starter-type (Evolution Stage 3)',
+                description='Lure to roll for a randomized third stage evolution Starter-type Pokémon from the Ilex subregion.',
+                stock=1,
+            ),
+            ItemStack(
+                icon_url='https://i.postimg.cc/mhf5hrkh/ina.png',
+                name='Inamorata',
+                description='Give your character Inamorata status',
+                stock=1,
+            ),
+            ItemStack(
+                icon_url='https://i.postimg.cc/Pq0XKmF7/lythra-baby.png',
+                name='Lythra (Baby)',
+                description='Lure to roll for a randomized baby Pokémon from the Lythra subregion.',
+                stock=1,
+            ),
+            ItemStack(
+                icon_url='https://i.postimg.cc/c1pxfM8t/lythra-ev2.png',
+                name='Lythra (Evolution Stage 2)',
+                description='Lure to roll for a randomized second stage evolution Pokémon from the Lythra subregion.',
+                stock=1,
+            ),
+            ItemStack(
+                icon_url='https://i.postimg.cc/Qdsjy8mX/lythra-ev3.png',
+                name='Lythra (Evolution Stage 3)',
+                description='Lure to roll for a randomized third stage evolution Pokémon from the Lythra subregion.',
+                stock=1,
+            ),
+            ItemStack(
+                icon_url='https://i.ibb.co/gg85S9G/newlythra1.png',
+                name='Lythra Starter-type (Evolution Stage 1)',
+                description='Lure to roll for a randomized first stage evolution Starter-type Pokémon from the Lythra subregion.',
+                stock=1,
+            ),
+            ItemStack(
+                icon_url='https://i.ibb.co/nkWf0RB/newlythra3.png',
+                name='Lythra Starter-type (Evolution Stage 3)',
+                description='Lure to roll for a randomized third stage evolution Starter-type Pokémon from the Callitris subregion.',
+                stock=1,
+            ),
+            ItemStack(
+                icon_url='https://i.ibb.co/G3f8YdX/redux.png',
+                name='Nerakos Lure',
+                description='Lure to roll for a randomized first stage evolution Pokémon from Nerákos.',
+                stock=1,
+            ),
+            ItemStack(
+                icon_url='https://i.postimg.cc/13Hyxk7D/parrya-ev2.png',
+                name='Parrya (Evolution Stage 2)',
+                description='Lure to roll for a randomized second stage evolution Pokémon from the Parrya subregion.',
+                stock=1,
+            ),
+            ItemStack(
+                icon_url='https://i.postimg.cc/6QbwqdX3/sophist-krisigos.png',
+                name='Sophistry (Krisigos)',
+                description='Become a Kourotrophos',
+                stock=1,
+            ),
+            ItemStack(
+                icon_url='https://i.postimg.cc/TwyxDpdc/sophist-mnemntia.png',
+                name='Sophistry (Mnemntia)',
+                description='Become a Professor',
+                stock=1,
+            ),
+            ItemStack(
+                icon_url='https://i.postimg.cc/fL6NjDkQ/sophist-strategos.png',
+                name='Sophistry (Strategos)',
+                description='Become a Hero of Gaia',
+                stock=1,
+            ),
+            ItemStack(
+                icon_url='https://i.postimg.cc/gj8PgQ6X/sophist-thiarchos.png',
+                name='Sophistry (Thiarchos)',
+                description='Become Gilded',
+                stock=1,
+            ),
+        ]
+
+    def test_parse_html_inventory_single(self):
+        inventory = self._read_inventory('inventory_single.html')
+
+        assert inventory.owner == 'Bryn Vaughn'
+        assert inventory.items == [
+            ItemStack(
+                icon_url='https://i.postimg.cc/zf06p5tP/hime.png',
+                name='Hemitheo Bloodline',
+                description='Create a new Hemitheo bloodline',
+                stock=1,
+            )
+        ]
+
+    @staticmethod
+    def _read_inventory(filename: str) -> Inventory:
+        with open(DATA_DIRECTORY / filename, 'rt', encoding='utf-8') as f:
+            doc = lxml.html.document_fromstring(f.read())
+
+        return Inventory.parse_html(doc)
