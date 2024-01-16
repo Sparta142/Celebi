@@ -12,11 +12,11 @@ from pydantic import ValidationError
 
 from celebi import utils
 from celebi.astonish.client import AstonishClient
-from celebi.astonish.models import RestrictedCharacterError, UserMismatchError
 from celebi.discord.transformers import (
     CharacterNotFoundError,
     PokemonNotFoundError,
 )
+from celebi.ext.astonish import RestrictedCharacterError, UserMismatchError
 from celebi.presentation import Presentation
 
 logger = logging.getLogger(__name__)

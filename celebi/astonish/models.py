@@ -35,19 +35,6 @@ class ElementNotFoundError(Exception):
     pass
 
 
-class RestrictedCharacterError(Exception):
-    def __init__(self, username: str) -> None:
-        msg = (
-            f'The character {username!r} is restricted and '
-            'may not be displayed in a public context.'
-        )
-        super().__init__(msg)
-
-
-class UserMismatchError(Exception):
-    pass
-
-
 class BaseModel(_BaseModel):
     model_config = ConfigDict(
         from_attributes=False,
@@ -378,22 +365,6 @@ class Character(BaseModel):
 
     def trainer_class(self) -> TrainerClass:
         return TrainerClass(self.group)  # Might raise an exception
-
-    def raise_if_restricted(self) -> None:
-        if self.restricted:
-            raise RestrictedCharacterError(self.username)
-
-    def raise_if_user_mismatch(
-        self,
-        user: discord.User | discord.Member,
-    ) -> None:
-        if self.extra.discord_id is None:
-            raise UserMismatchError('This character has no linked Discord user')
-        elif self.extra.discord_id != user.id:
-            raise UserMismatchError(
-                'The given Discord user does not match '
-                'the one linked to this character'
-            )
 
 
 class ItemStack(BaseModel):

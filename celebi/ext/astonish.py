@@ -73,7 +73,7 @@ class AstonishCog(BaseCog['CelebiClient']):
 
         :param character: The (partial) name or numeric ID of the character whose PC to show.
         """
-        character.raise_if_restricted()
+        self._raise_if_restricted(character)
 
         # Get their team and ensure it has at least 1 Pokemon
         count = len(character.personal_computer)
@@ -113,7 +113,7 @@ class AstonishCog(BaseCog['CelebiClient']):
 
         :param character: The (partial) name or numeric ID of the character profile to show.
         """
-        character.raise_if_restricted()
+        self._raise_if_restricted(character)
 
         # Generate an embed for the character
         try:
@@ -152,8 +152,10 @@ class AstonishCog(BaseCog['CelebiClient']):
 
         :param character: The (partial) name or numeric ID of the character whose inventory to show.
         """
-        character.raise_if_restricted()
-        character.raise_if_user_mismatch(interaction.user)
+        assert isinstance(interaction.user, discord.Member)  # Guild-only
+
+        self._raise_if_restricted(character)
+        self._raise_if_mismatch(character, interaction.user)
 
         inventory = await self.astonish_client.get_inventory(character.id)
         if not inventory.items:
@@ -478,6 +480,44 @@ class AstonishCog(BaseCog['CelebiClient']):
         for chara in self.astonish_client.character_cache.values():
             if chara.extra.discord_id == id and not chara.restricted:
                 yield chara
+
+    @staticmethod
+    def _raise_if_restricted(chara: Character) -> None:
+        if chara.restricted:
+            raise RestrictedCharacterError(chara.username)
+
+    @staticmethod
+    def _raise_if_mismatch(chara: Character, member: discord.Member) -> None:
+        perms = member.resolved_permissions
+
+        if perms is not None and perms.administrator:
+            return  # Admins are allowed to view anyone's info
+
+        discord_id = chara.extra.discord_id
+
+        if discord_id is None:
+            raise UserMismatchError(
+                f'The character {chara.username!r} has no linked Discord user'
+            )
+
+        if discord_id != member.id:
+            raise UserMismatchError(
+                'The Discord user does not match the one '
+                f'linked to character {chara.username!r}'
+            )
+
+
+class RestrictedCharacterError(Exception):
+    def __init__(self, username: str) -> None:
+        msg = (
+            f'The character {username!r} is restricted and '
+            'may not be displayed in a public context.'
+        )
+        super().__init__(msg)
+
+
+class UserMismatchError(Exception):
+    pass
 
 
 class PokemonTeamView(EmbedMenu):
