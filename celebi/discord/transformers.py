@@ -210,7 +210,7 @@ class CharacterTransformer(Transformer):
         return self.__characters
 
 
-def _similarity(*args, score_cutoff: float, **kwargs) -> float:
+def _similarity(*args: Any, score_cutoff: float, **kwargs: Any) -> float:
     jw_similarity = rapidfuzz.distance.JaroWinkler.normalized_similarity(
         *args,
         **kwargs,

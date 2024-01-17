@@ -2,7 +2,7 @@ from __future__ import annotations as _annotations
 
 import logging
 from contextlib import contextmanager, suppress
-from typing import TYPE_CHECKING, Iterable, Iterator, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Iterable, Iterator, Protocol, TypeVar
 
 import aiopoke
 import discord
@@ -124,7 +124,11 @@ def rewrap_exception(
         raise to_type(*e.args) from e
 
 
-async def respond(interaction: discord.Interaction, *args, **kwargs) -> None:
+async def respond(
+    interaction: discord.Interaction,
+    *args: Any,
+    **kwargs: Any,
+) -> None:
     interaction = unwrap(interaction)
 
     match interaction.response.type:

@@ -2,7 +2,7 @@ from __future__ import annotations as _annotations
 
 import re
 from enum import IntEnum
-from typing import Final, Self
+from typing import Final, Iterator, Self
 
 import lxml.html
 from frozendict import frozendict
@@ -56,7 +56,7 @@ class AstonishShop(FrozenBaseModel):
         # Parse the '.starter' divs
         starter_elems = element.cssselect('.catchable-region.starter')
 
-        def _select_section(title: str):
+        def _select_section(title: str, /) -> Iterator[lxml.html.HtmlElement]:
             for e in starter_elems:
                 (span,) = e.cssselect('span.region-title')
                 if span.text == title:

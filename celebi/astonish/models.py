@@ -2,7 +2,7 @@
 
 from enum import Enum, StrEnum
 from functools import cached_property
-from typing import Annotated, Any, Final, Literal, Self
+from typing import Annotated, Any, Final, Iterator, Literal, Self
 
 import discord
 import lxml.etree
@@ -125,13 +125,13 @@ class PersonalComputer(BaseModel):
         ]
         return cls(root=root)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Pokemon]:  # type: ignore[override]
         return iter(self.root)
 
     def __len__(self) -> int:
         return len(self.root)
 
-    def __getitem__(self, item: int):
+    def __getitem__(self, item: int) -> Pokemon:
         return self.root[item]
 
     def model_dump_html(self) -> str:
@@ -139,7 +139,7 @@ class PersonalComputer(BaseModel):
 
 
 class DescEnum(Enum):
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args: Any, **kwargs: Any):
         obj = object.__new__(cls)
         obj._value_ = args[0]
         return obj
@@ -416,7 +416,7 @@ class Inventory(BaseModel):
             items=items,
         )
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[ItemStack]:  # type: ignore[override]
         yield from self.items
 
 

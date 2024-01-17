@@ -1,7 +1,7 @@
 from __future__ import annotations as _annotations
 
 import logging
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, Iterator
 
 import discord
 from discord import app_commands
@@ -577,7 +577,10 @@ class CharacterListView(EmbedMenu):
 
 
 # TODO: Move this somewhere else
-def get_roles_for_chara(chara: Character, guild: discord.Guild):
+def get_roles_for_chara(
+    chara: Character,
+    guild: discord.Guild,
+) -> Iterator[discord.Role]:
     get = discord.utils.get
     roles = guild.roles
 
@@ -601,7 +604,7 @@ def get_roles_for_chara(chara: Character, guild: discord.Guild):
     yield must(get(roles, name='Members'))
 
 
-def get_roles_to_remove(guild: discord.Guild):
+def get_roles_to_remove(guild: discord.Guild) -> Iterator[discord.Role]:
     yield must(discord.utils.get(guild.roles, name='Guests'))
 
 

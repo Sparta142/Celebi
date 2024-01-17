@@ -299,7 +299,7 @@ class Presentation:
         )
 
     @staticmethod
-    def sprite(pkmn: Pokemon, shiny: bool):
+    def sprite(pkmn: Pokemon, shiny: bool) -> str | None:
         other = pkmn.sprites.other
         if not other:
             return None

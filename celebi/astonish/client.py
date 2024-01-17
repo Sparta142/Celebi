@@ -244,7 +244,7 @@ class AstonishClient:
         url: StrOrURL = '/index.php',
         *,
         login: bool = True,
-        **kwargs,
+        **kwargs: Any,
     ) -> str:
         if login and not self._has_session_cookies():
             await self.login()
