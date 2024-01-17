@@ -1,3 +1,5 @@
+# pyright: reportGeneralTypeIssues=false
+
 import lxml.html
 from frozendict import frozendict
 

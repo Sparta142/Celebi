@@ -1,3 +1,5 @@
+# pyright: reportGeneralTypeIssues=false
+
 from enum import Enum, StrEnum
 from functools import cached_property
 from typing import Annotated, Any, Final, Literal, Self
@@ -48,7 +50,7 @@ class Pokemon(BaseModel):
     shiny: StrictBool = False
     custom_sprite_url: OptionalHttpUrl = None
 
-    _pkmn_id_attr: Final[str] = 'data-pkmn-id'
+    _pkmn_id_attr: Final = 'data-pkmn-id'
 
     @property
     def sprite_url(self) -> str:
