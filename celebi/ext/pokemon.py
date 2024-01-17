@@ -4,8 +4,8 @@ import logging
 from typing import TYPE_CHECKING
 
 from discord import app_commands
-from discord.ext.commands import Cog
 
+from celebi.discord.cog import BaseCog
 from celebi.discord.transformers import TransformPokemon
 
 if TYPE_CHECKING:
@@ -17,9 +17,9 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class PokemonCog(Cog):
+class PokemonCog(BaseCog['CelebiClient']):
     def __init__(self, bot: CelebiClient) -> None:
-        self.bot = bot
+        super().__init__(bot)
 
     @property
     def poke_client(self) -> AiopokeClient:
