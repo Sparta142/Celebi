@@ -275,7 +275,7 @@ class AstonishClient:
 
         # If the showuser param is not 0, it (probably) refers
         # to the member ID of the currently logged-in user.
-        return url.query.get('showuser') != '0'
+        return url.query.get('showuser', '0') != '0'
 
     @classmethod
     def _parse_modcp_fields(cls, markup: AnyStr, /) -> _ModCPFields:
