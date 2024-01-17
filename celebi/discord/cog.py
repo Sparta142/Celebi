@@ -15,7 +15,7 @@ class BaseCog(Cog, Generic[TClient]):
         self.bot = bot
         self._context_menus: list[ContextMenu] = []
 
-    # https://github.com/Rapptz/discord.py/issues/7823
+    # https://github.com/Rapptz/discord.py/issues/7823#issuecomment-1086830458
     def add_context_menu(self, menu: ContextMenu, /) -> None:
         self.bot.tree.add_command(menu)
         self._context_menus.append(menu)
