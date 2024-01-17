@@ -83,7 +83,7 @@ class Pokemon(BaseModel):
             id=id,
             name=pkmn_name.text_content(),
             shiny='shiny' in element.attrib.get('class', []),
-            custom_sprite_url=str(src),  # type: ignore
+            custom_sprite_url=str(src),
         )
 
     def model_dump_html(self) -> str:
@@ -424,7 +424,7 @@ class ExtraDataV1(BaseModel):
     version: Literal[1] = 1
     discord_id: int | None = None
 
-    model_config = {'arbitrary_types_allowed': True}
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 ExtraData = Annotated[

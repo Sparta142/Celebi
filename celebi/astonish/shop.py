@@ -117,7 +117,7 @@ class _PokemonType(FrozenBaseModel):
     name: StrictStr
     rarity: Rarity = Rarity.COMMON
 
-    _rare_suffix: Final[str] = '*'
+    _rare_suffix: Final = '*'
     """The suffix a rare Pokemon type has when displayed on the website."""
 
     @classmethod
