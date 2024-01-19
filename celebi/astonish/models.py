@@ -65,19 +65,17 @@ class Pokemon(BaseModel):
 
     @classmethod
     def parse_html(cls, element: lxml.html.HtmlElement) -> Self:
-        # If it has a Pokemon ID override, use that
-        try:
-            id = int(element.attrib[cls._pkmn_id_attr])
-        except KeyError:
-            id = None
-
-        (pkmn_name,) = element.cssselect('div.pkmn-name')
         (img,) = element.cssselect('img[src]')
         src = URL(img.attrib['src'])
 
-        # Fallback: try to parse the Pokemon ID out of the sprite URL
-        if id is None:
+        # If it has a Pokemon ID override, use that, otherwise
+        # try to parse it out of the <img> src attribute.
+        try:
+            id = int(element.attrib[cls._pkmn_id_attr])
+        except KeyError:
             id = int(src.name.removesuffix(src.suffix))
+
+        (pkmn_name,) = element.cssselect('div.pkmn-name')
 
         return cls(
             id=id,
