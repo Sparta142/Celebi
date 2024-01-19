@@ -3,7 +3,6 @@ from __future__ import annotations as _annotations
 import collections
 import logging
 import random
-from contextlib import suppress
 from typing import TYPE_CHECKING
 
 import discord
@@ -313,8 +312,9 @@ class Presentation:
             sprites.reverse()
 
         for sprite in sprites:
-            with suppress(AttributeError):  # `url` can be undefined
-                return sprite.url
+            url = getattr(sprite, 'url', None)  # `url` can be undefined
+            if isinstance(url, str):
+                return url
 
         return None
 
