@@ -6,8 +6,9 @@ from typing import Final, Iterator, Self
 
 import lxml.html
 from frozendict import frozendict
-from pydantic import BaseModel as _BaseModel
 from pydantic import ConfigDict, StrictStr
+
+from celebi.astonish.models import BaseModel
 
 __all__ = [
     'AstonishShop',
@@ -15,7 +16,7 @@ __all__ = [
 ]
 
 
-class FrozenBaseModel(_BaseModel):
+class FrozenBaseModel(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
