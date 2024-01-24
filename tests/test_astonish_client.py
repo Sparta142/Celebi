@@ -1,3 +1,4 @@
+import lxml.html
 import pytest
 
 from celebi.astonish.client import AstonishClient
@@ -6,8 +7,8 @@ from . import DATA_DIRECTORY
 
 
 def test_parse_modcp_fields():
-    with open(DATA_DIRECTORY / 'modcp_bryn_vaughn.html', 'rb') as f:
-        form, synthetic = AstonishClient._parse_modcp_fields(f.read())
+    doc = _read_document('modcp_bryn_vaughn.html')
+    form, synthetic = AstonishClient._parse_modcp_fields(doc)
 
     # "Synthetic" fields (not from form inputs, but from other page data)
     assert synthetic['username'] == 'Bryn Vaughn'
@@ -73,8 +74,8 @@ def test_parse_modcp_fields():
     ],
 )
 def test_is_logged_in(filename: str):
-    with open(DATA_DIRECTORY / filename, 'rb') as f:
-        assert AstonishClient._is_logged_in(f.read())
+    doc = _read_document(filename)
+    assert AstonishClient._is_logged_in(doc)
 
 
 @pytest.mark.parametrize(
@@ -90,5 +91,10 @@ def test_is_logged_in(filename: str):
     ],
 )
 def test_parse_character_group(filename: str, group: str):
+    doc = _read_document(filename)
+    assert AstonishClient._parse_character_group(doc) == group
+
+
+def _read_document(filename: str) -> lxml.html.HtmlElement:
     with open(DATA_DIRECTORY / filename, 'rb') as f:
-        assert AstonishClient._parse_character_group(f.read()) == group
+        return lxml.html.document_fromstring(f.read())

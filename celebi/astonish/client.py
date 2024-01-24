@@ -5,7 +5,7 @@ import inspect
 import logging
 import re
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, AnyStr, NamedTuple, Self
+from typing import TYPE_CHECKING, Any, NamedTuple, Self
 
 import aiohttp
 import backoff
@@ -153,8 +153,8 @@ class AstonishClient:
         :param memberid: The Jcink member ID to lookup
         :return: The member's group
         """
-        markup = await self.get(params={'showuser': memberid})
-        return self._parse_character_group(markup)
+        doc = await self.get(params={'showuser': memberid})
+        return self._parse_character_group(doc)
 
     async def get_inventory(self, memberid: int) -> Inventory:
         """
@@ -163,15 +163,13 @@ class AstonishClient:
         :param memberid: The Jcink member ID to lookup
         :return: The member's inventory
         """
-        markup = await self.get(
+        doc = await self.get(
             params={
                 'act': 'store',
                 'code': 'view_inventory',
                 'memberid': memberid,
             },
         )
-
-        doc = lxml.html.document_fromstring(markup)
         return Inventory.parse_html(doc)
 
     async def update_character(self, character: Character) -> None:
@@ -186,7 +184,7 @@ class AstonishClient:
             response.raise_for_status()
 
     async def get_all_characters(self) -> dict[int, MemberCard]:
-        markup = await self.get(
+        doc = await self.get(
             login=False,
             params={
                 'act': 'Members',
@@ -194,7 +192,6 @@ class AstonishClient:
             },
         )
 
-        doc = lxml.html.document_fromstring(markup)
         members: dict[int, MemberCard] = {}
 
         for div in doc.cssselect('div.member-list-member'):
@@ -204,7 +201,7 @@ class AstonishClient:
         return members
 
     async def get_shop_data(self) -> AstonishShop:
-        markup = await self.get(
+        doc = await self.get(
             login=False,
             params={
                 'act': 'store',
@@ -212,11 +209,10 @@ class AstonishClient:
                 'category': 5,
             },
         )
-        doc = lxml.html.document_fromstring(markup)
         return AstonishShop.parse_html(doc)
 
     async def _get_modcp_fields(self, memberid: int) -> _ModCPFields:
-        markup = await self.get(
+        doc = await self.get(
             login=True,
             params={
                 'act': 'modcp',
@@ -224,7 +220,7 @@ class AstonishClient:
                 'memberid': memberid,
             },
         )
-        return self._parse_modcp_fields(markup)
+        return self._parse_modcp_fields(doc)
 
     @inspect.markcoroutinefunction  # @staticmethod is not recognized as async
     @staticmethod
@@ -245,7 +241,7 @@ class AstonishClient:
         *,
         login: bool = True,
         **kwargs: Any,
-    ) -> str:
+    ) -> lxml.html.HtmlElement:
         if login and not self._has_session_cookies():
             await self.login()
 
@@ -253,10 +249,12 @@ class AstonishClient:
             response.raise_for_status()
             markup = await response.text()
 
-        if login and not self._is_logged_in(markup):
+        doc = lxml.html.document_fromstring(markup)
+
+        if login and not self._is_logged_in(doc):
             raise LoginFailedError('Session cookies set but not logged in')
 
-        return markup
+        return doc
 
     def _has_session_cookies(self) -> bool:
         cookies = self.session.cookie_jar.filter_cookies(self.base_url)
@@ -266,8 +264,7 @@ class AstonishClient:
         self.character_cache[chara.id] = chara
 
     @staticmethod
-    def _is_logged_in(markup: AnyStr, /) -> bool:
-        doc = lxml.html.document_fromstring(markup)
+    def _is_logged_in(doc: lxml.html.HtmlElement, /) -> bool:
         (a,) = doc.cssselect(
             '#mobile-menu-activate > li[title="user profile"] > a[href*="showuser="]'
         )
@@ -278,9 +275,7 @@ class AstonishClient:
         return url.query.get('showuser', '0') != '0'
 
     @classmethod
-    def _parse_modcp_fields(cls, markup: AnyStr, /) -> _ModCPFields:
-        doc = lxml.html.document_fromstring(markup)
-
+    def _parse_modcp_fields(cls, doc: lxml.html.HtmlElement, /) -> _ModCPFields:
         # Find the div containing the username
         pattern = re.compile(r'^Edit a users profile: (?P<username>.+)$', re.I)
 
@@ -316,8 +311,7 @@ class AstonishClient:
         raise ElementNotFoundError('<form name="ibform"...>')
 
     @staticmethod
-    def _parse_character_group(markup: AnyStr, /) -> str:
-        doc = lxml.html.document_fromstring(markup)
+    def _parse_character_group(doc: lxml.html.HtmlElement, /) -> str:
         (span,) = doc.cssselect(
             '#main-profile-trainer-class > span.description'
         )
