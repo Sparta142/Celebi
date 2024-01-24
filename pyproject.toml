@@ -15,6 +15,7 @@ repository = "https://github.com/Sparta142/Celebi"
 aiohttp = { version = "^3.9.0", extras = ["speedups"] }
 aiopokeapi = { git = "https://github.com/beastmatser/aiopokeapi.git", rev = "3f52f785f9c28711a270755f0253bf964bd65e86" }
 backoff = "^2.2.1"
+cachetools = "^5.3.2"
 cssselect = "^1.2.0"
 "discord.py" = { version = "^2.3", extras = ["speed"] }
 frozendict = "^2.3.10"
@@ -31,6 +32,7 @@ pytest = "^7.4.3"
 python-dotenv = "^1.0.0"
 ruff = "^0.1.4"
 types-beautifulsoup4 = "^4.12.0.7"
+types-cachetools = "^5.3.0.7"
 types-lxml = "^2023.10.21"
 
 [tool.poetry.group.ci.dependencies]

@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, NamedTuple, Self
 import aiohttp
 import backoff
 import lxml.html
+from cachetools import TTLCache
 from yarl import URL
 
 from celebi.astonish.models import (
@@ -47,7 +48,10 @@ class AstonishClient:
         self.username = username
         self.password = password
 
-        self.character_cache: dict[int, Character] = {}
+        self.character_cache: TTLCache[int, Character] = TTLCache(
+            maxsize=256,
+            ttl=5 * 60,  # 5 minutes
+        )
 
         # Initialized in __aenter__ where we have a running event loop
         self.session: aiohttp.ClientSession
@@ -182,6 +186,8 @@ class AstonishClient:
 
         async with self.session.post(action.relative(), data=form) as response:
             response.raise_for_status()
+
+        self._update_in_cache(character)
 
     async def get_all_characters(self) -> dict[int, MemberCard]:
         doc = await self.get(
