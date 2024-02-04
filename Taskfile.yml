@@ -1,6 +1,12 @@
 version: "3"
 
 tasks:
+  act:
+    desc: Runs act (local GitHub Actions) on the project.
+    cmd: act --bind --rm --workflows=.github/workflows/test.yml {{.CLI_ARGS}}
+    aliases:
+      - ci
+
   build:
     desc: Builds the project as a tarball and a wheel.
     cmd: poetry build {{.CLI_ARGS}}
@@ -13,10 +19,17 @@ tasks:
     desc: Runs various tests and linters against the project.
     cmds:
       - poetry check --lock
-      - poetry run pytest --verbose
+      - poetry run pytest
       - poetry run ruff check ./celebi
-      - poetry run mypy ./celebi
+      - poetry run mypy --package=celebi
+    aliases:
+      - default
+      - test
 
-  act:
-    desc: Runs act (local GitHub Actions) on the project.
-    cmd: act --bind --rm --workflows=.github/workflows/test.yml {{.CLI_ARGS}}
+  update:
+    desc: Update project dependencies.
+    cmds:
+      - poetry update
+      - pre-commit autoupdate
+    aliases:
+      - upgrade
