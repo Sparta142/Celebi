@@ -40,5 +40,5 @@ jobs:
         if: always()
 
       - name: Type check
-        run: poetry run mypy celebi
+        run: poetry run mypy --package=celebi
         if: always()
