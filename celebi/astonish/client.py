@@ -80,6 +80,19 @@ class AstonishClient:
             len(self.character_cache),
         )
 
+        # Fetch shop (IBstore) data
+        self.shop = await self._get_shop_data()
+
+        logger.info(
+            'Shop data loaded successfully: %d regions, %d baby pokemon, '
+            '%d T1 starters, %d T2 starters, %d T3 starters found',
+            len(self.shop.regions),
+            len(self.shop.baby_pokemon),
+            len(self.shop.stage_1_starters),
+            len(self.shop.stage_2_starters),
+            len(self.shop.stage_3_starters),
+        )
+
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
@@ -206,7 +219,7 @@ class AstonishClient:
 
         return members
 
-    async def get_shop_data(self) -> AstonishShop:
+    async def _get_shop_data(self) -> AstonishShop:
         doc = await self.get(
             login=False,
             params={

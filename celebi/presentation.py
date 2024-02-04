@@ -14,7 +14,6 @@ from celebi.utils import pokemon_name, translate, translate_first
 
 if TYPE_CHECKING:
     from celebi.astonish.client import AstonishClient
-    from celebi.astonish.shop import AstonishShop
 
 logger = logging.getLogger(__name__)
 
@@ -51,8 +50,6 @@ class Presentation:
     ) -> None:
         self.guild = guild
         self.astonish_client = astonish_client
-
-        self._shop_data: AstonishShop | None = None
 
     def embed_character(
         self,
@@ -237,7 +234,7 @@ class Presentation:
 
             embed.add_field(
                 name='Location',
-                value=', '.join(await self.pokemon_locations(pkmn)),
+                value=', '.join(self.pokemon_locations(pkmn)),
                 inline=False,
             )
 
@@ -350,8 +347,8 @@ class Presentation:
 
     # TODO: Move to another class and consider caching
     # TODO: Take banned Pokemon into account
-    async def pokemon_locations(self, pkmn: Pokemon) -> list[str]:
-        shop = await self.shop_data()
+    def pokemon_locations(self, pkmn: Pokemon) -> list[str]:
+        shop = self.astonish_client.shop
 
         # A Pokemon is part of a region if it shares at least
         # one type with that region (regardless of rarity).
@@ -362,13 +359,6 @@ class Presentation:
                 if any(region.contains_type(pt.type.name) for pt in pkmn.types)
             ]
         )
-
-    # TODO: Probably don't cache this here
-    async def shop_data(self) -> AstonishShop:
-        if self._shop_data is None:
-            self._shop_data = await self.astonish_client.get_shop_data()
-
-        return self._shop_data
 
 
 def sanitize_text(string: str, /) -> str:

@@ -13,7 +13,6 @@ from celebi.astonish.models import (
     Pokemon,
     TrainerClass,
 )
-from celebi.astonish.shop import AstonishShop
 from celebi.discord.cog import BaseCog
 from celebi.discord.transformers import TransformCharacter, TransformPokemon
 from celebi.discord.views import ConfirmationView, EmbedMenu
@@ -30,12 +29,6 @@ logger = logging.getLogger(__name__)
 
 
 class AstonishCog(BaseCog['CelebiClient']):
-    def __init__(self, bot: CelebiClient) -> None:
-        super().__init__(bot)
-
-        # Initialized in .cog_load()
-        self._shop: AstonishShop
-
     @property
     def poke_client(self) -> AiopokeClient:
         return self.bot.poke_client
@@ -47,19 +40,6 @@ class AstonishCog(BaseCog['CelebiClient']):
     @property
     def astonish_client(self) -> AstonishClient:
         return self.bot.astonish_client
-
-    async def cog_load(self) -> None:
-        # Load data from the forum's IBStore
-        self._shop = await self.astonish_client.get_shop_data()
-        logger.info(
-            'Shop data loaded successfully: %d regions, %d baby pokemon, '
-            '%d S1 starters, %d S2 starters, %d S3 starters found',
-            len(self._shop.regions),
-            len(self._shop.baby_pokemon),
-            len(self._shop.stage_1_starters),
-            len(self._shop.stage_2_starters),
-            len(self._shop.stage_3_starters),
-        )
 
     @app_commands.command()
     @app_commands.guild_only()
