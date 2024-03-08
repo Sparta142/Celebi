@@ -303,7 +303,7 @@ class AstonishCog(BaseCog['CelebiClient']):
                     await pkmn.species.fetch(),
                 ),
                 shiny=shiny,
-                custom_sprite_url=custom_sprite_url,  # pyright: ignore[reportGeneralTypeIssues]
+                custom_sprite_url=custom_sprite_url,  # pyright: ignore[reportArgumentType]
             )
         )
         await self.astonish_client.update_character(character)

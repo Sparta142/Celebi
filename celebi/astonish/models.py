@@ -1,4 +1,4 @@
-# pyright: reportGeneralTypeIssues=false
+# pyright: reportArgumentType=false
 
 from enum import Enum, StrEnum
 from functools import cached_property
