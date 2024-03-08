@@ -15,7 +15,6 @@ from yarl import URL
 
 from celebi.astonish.models import (
     Character,
-    ElementNotFoundError,
     Inventory,
     MemberCard,
 )
@@ -37,6 +36,10 @@ class LoginFailedError(Exception):
 class _ModCPFields(NamedTuple):
     form_fields: dict[str, Any]
     synthetic_fields: dict[str, Any]
+
+
+class ElementNotFoundError(Exception):
+    pass
 
 
 class AstonishClient:

@@ -33,10 +33,6 @@ OptionalHttpUrl = Annotated[
 ]
 
 
-class ElementNotFoundError(Exception):
-    pass
-
-
 class BaseModel(_BaseModel):
     model_config = ConfigDict(
         from_attributes=False,
