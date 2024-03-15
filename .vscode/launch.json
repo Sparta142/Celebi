@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "Celebi",
-      "type": "python",
+      "type": "debugpy",
       "request": "launch",
       "module": "celebi",
       "justMyCode": false
