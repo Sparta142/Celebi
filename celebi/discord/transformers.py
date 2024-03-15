@@ -1,3 +1,5 @@
+# mypy: disable-error-code="override"
+
 from __future__ import annotations as _annotations
 
 import re
@@ -62,6 +64,8 @@ class PokemonTransformer(Transformer):
         interaction: CelebiInteraction,
         value: Any,
     ) -> aiopoke.Pokemon:
+        name_or_id: int | str
+
         try:
             name_or_id = int(value)
         except ValueError:
