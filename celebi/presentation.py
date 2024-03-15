@@ -355,7 +355,7 @@ class Presentation:
         return sorted(
             [
                 region.name
-                for region in shop.regions
+                for region in shop.regions.values()
                 if any(region.contains_type(pt.type.name) for pt in pkmn.types)
             ]
         )

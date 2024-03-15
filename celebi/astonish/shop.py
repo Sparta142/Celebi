@@ -2,7 +2,7 @@ from __future__ import annotations as _annotations
 
 import re
 from enum import IntEnum
-from typing import Final, Iterator, Self
+from typing import Final, Iterator, Literal, Self
 
 import lxml.html
 from frozendict import frozendict
@@ -11,7 +11,7 @@ from pydantic import ConfigDict, StrictStr
 from celebi.astonish.models import BaseModel
 
 __all__ = [
-    'AstonishShop',
+    'AstonishShopData',
     'Region',
 ]
 
@@ -20,8 +20,8 @@ class FrozenBaseModel(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class AstonishShop(FrozenBaseModel):
-    regions: tuple[Region, ...]
+class AstonishShopData(FrozenBaseModel):
+    regions: frozendict[str, Region]
     baby_pokemon: frozenset[str]
     stage_1_starters: frozenset[str]
     stage_2_starters: frozenset[str]
@@ -73,7 +73,7 @@ class AstonishShop(FrozenBaseModel):
             )
 
         return cls(
-            regions=regions,
+            regions=frozendict({r.name: r for r in regions}),
             baby_pokemon=_split(baby_pokemon),
             stage_1_starters=_split(stage_1_starters),
             stage_2_starters=_split(stage_2_starters),
@@ -81,11 +81,29 @@ class AstonishShop(FrozenBaseModel):
         )
 
 
+PokemonType = Literal[
+    'Bug',
+    'Dark',
+    'Electric',
+    'Fighting',
+    'Fire',
+    'Flying',
+    'Ghost',
+    'Grass',
+    'Ground',
+    'Ice',
+    'Normal',
+    'Poison',
+    'Psychic',
+    'Rock',
+    'Steel',
+    'Water',
+]
+
+
 class Region(FrozenBaseModel):
     name: StrictStr
-    types: frozendict[str, Rarity]
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)  # frozendict
+    types: frozendict[PokemonType, Rarity]
 
     @classmethod
     def parse_html(cls, element: lxml.html.HtmlElement) -> Self:
@@ -107,6 +125,11 @@ class Region(FrozenBaseModel):
 
     def contains_type(self, type: str) -> bool:
         return type in self.types
+
+    def get_types(self, rarity: Rarity) -> Iterator[str]:
+        for k, v in self.types.items():
+            if v == rarity:
+                yield k
 
 
 class Rarity(IntEnum):

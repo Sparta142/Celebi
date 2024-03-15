@@ -9,7 +9,7 @@ from celebi.astonish.models import (
     MemberCard,
     PersonalComputer,
 )
-from celebi.astonish.shop import AstonishShop, Rarity, Region, _PokemonType
+from celebi.astonish.shop import AstonishShopData, Rarity, Region, _PokemonType
 
 from . import DATA_DIRECTORY
 
@@ -112,14 +112,14 @@ class TestShop:
         ) as f:
             doc = lxml.html.document_fromstring(f.read())
 
-        shop = AstonishShop.parse_html(doc)
+        shop = AstonishShopData.parse_html(doc)
 
         _ = hash(shop)  # Check that it's hashable
 
         assert len(shop.regions) == 4
 
-        assert shop.regions[0].name == 'Lythra'
-        assert shop.regions[0].types == {
+        assert shop.regions['Lythra'].name == 'Lythra'
+        assert shop.regions['Lythra'].types == {
             'normal': Rarity.COMMON,
             'grass': Rarity.COMMON,
             'bug': Rarity.COMMON,
@@ -131,8 +131,8 @@ class TestShop:
             'psychic': Rarity.RARE,
         }
 
-        assert shop.regions[1].name == 'Callitris'
-        assert shop.regions[1].types == {
+        assert shop.regions['Callitris'].name == 'Callitris'
+        assert shop.regions['Callitris'].types == {
             'normal': Rarity.COMMON,
             'ice': Rarity.COMMON,
             'ghost': Rarity.COMMON,
@@ -143,8 +143,8 @@ class TestShop:
             'psychic': Rarity.RARE,
         }
 
-        assert shop.regions[2].name == 'Parrya'
-        assert shop.regions[2].types == {
+        assert shop.regions['Parrya'].name == 'Parrya'
+        assert shop.regions['Parrya'].types == {
             'normal': Rarity.COMMON,
             'fire': Rarity.COMMON,
             'fighting': Rarity.COMMON,
@@ -156,8 +156,8 @@ class TestShop:
             'electric': Rarity.RARE,
         }
 
-        assert shop.regions[3].name == 'Ilex'
-        assert shop.regions[3].types == {
+        assert shop.regions['Ilex'].name == 'Ilex'
+        assert shop.regions['Ilex'].types == {
             'normal': Rarity.COMMON,
             'water': Rarity.COMMON,
             'flying': Rarity.COMMON,
