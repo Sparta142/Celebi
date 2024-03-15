@@ -1,7 +1,5 @@
 from __future__ import annotations as _annotations
 
-import io
-import json
 import logging
 from typing import TYPE_CHECKING, Final, Iterator
 
@@ -487,15 +485,7 @@ class AstonishCog(BaseCog['CelebiClient']):
             behavior,
         )
 
-        candidates = [p.name for p in behavior.pokemon]
-        j = json.dumps(candidates, indent=2)
-
-        with io.BytesIO(j.encode('utf-8')) as f:
-            await interaction.response.send_message(
-                'Candidates:', file=discord.File(f, filename='candidates.json')
-            )
-
-        # await behavior.use(self.astonish_client, character)
+        await behavior.use(self.astonish_client, character)
 
     def _user_characters(self, user: discord.User | discord.Member, /):
         id = user.id
