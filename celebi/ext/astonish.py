@@ -1,5 +1,7 @@
 from __future__ import annotations as _annotations
 
+import io
+import json
 import logging
 from typing import TYPE_CHECKING, Final, Iterator
 
@@ -14,7 +16,11 @@ from celebi.astonish.models import (
     TrainerClass,
 )
 from celebi.discord.cog import BaseCog
-from celebi.discord.transformers import TransformCharacter, TransformPokemon
+from celebi.discord.transformers import (
+    TransformCharacter,
+    TransformPokemon,
+    TransformStoreItem,
+)
 from celebi.discord.views import ConfirmationView, EmbedMenu
 from celebi.utils import must, pokemon_name
 
@@ -215,7 +221,7 @@ class AstonishCog(BaseCog['CelebiClient']):
 
         logger.info(
             '%r linked profile %r to Discord user %r',
-            interaction.user,
+            str(interaction.user),
             chara.username,
             str(member),
         )
@@ -453,6 +459,43 @@ class AstonishCog(BaseCog['CelebiClient']):
             view=view,
             embed=await view.default_embed(),
         )
+
+    @app_commands.command()
+    @app_commands.guild_only()
+    @app_commands.rename(behavior='item')
+    async def use(
+        self,
+        interaction: CelebiInteraction,
+        character: TransformCharacter,
+        behavior: TransformStoreItem,
+    ) -> None:
+        """
+        Use an item in your inventory.
+
+        :param character: The character whose inventory to take from.
+        :param behavior: The item to use.
+        """
+        assert isinstance(interaction.user, discord.Member)
+
+        self._raise_if_restricted(character)
+        self._raise_if_mismatch(character, interaction.user)
+
+        logger.info(
+            '%r (as %r) is using item: %r',
+            str(interaction.user),
+            character.username,
+            behavior,
+        )
+
+        candidates = [p.name for p in behavior.pokemon]
+        j = json.dumps(candidates, indent=2)
+
+        with io.BytesIO(j.encode('utf-8')) as f:
+            await interaction.response.send_message(
+                'Candidates:', file=discord.File(f, filename='candidates.json')
+            )
+
+        # await behavior.use(self.astonish_client, character)
 
     def _user_characters(self, user: discord.User | discord.Member, /):
         id = user.id

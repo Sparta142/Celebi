@@ -13,13 +13,14 @@ repository = "https://github.com/Sparta142/Celebi"
 
 [tool.poetry.dependencies]
 aiohttp = { version = "^3.9.0", extras = ["speedups"] }
-aiopokeapi = { git = "https://github.com/beastmatser/aiopokeapi.git", rev = "3f52f785f9c28711a270755f0253bf964bd65e86" }
+aiopokeapi = { git = "https://github.com/Sparta142/aiopokeapi.git", rev = "0494df8c643542fbab2daa3f0f833751eaba3949" }
 backoff = "^2.2.1"
 cachetools = "^5.3.2"
 cssselect = "^1.2.0"
 "discord.py" = { version = "^2.3", extras = ["speed"] }
 frozendict = "^2.3.10"
 lxml = "^4.9.3"
+networkx = "^3.2.1"
 pydantic = "^2.4.2"
 python = "^3.12"
 rapidfuzz = "^3.5.2"
@@ -30,7 +31,7 @@ yarl = "^1.9.2"
 mypy = "^1.7.0"
 pytest = "^7.4.3"
 python-dotenv = "^1.0.0"
-ruff = "^0.1.4"
+ruff = "^0.3.1"
 types-beautifulsoup4 = "^4.12.0.7"
 types-cachetools = "^5.3.0.7"
 types-lxml = "^2023.10.21"
@@ -40,6 +41,7 @@ pytest-github-actions-annotate-failures = "0.2.0"
 
 [tool.ruff]
 line-length = 80
+target-version = "py312"
 
 [tool.ruff.format]
 indent-style = "space"
