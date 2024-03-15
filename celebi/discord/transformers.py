@@ -10,7 +10,6 @@ import aiopoke
 import rapidfuzz
 from discord.app_commands import Choice, Transform, Transformer
 
-from celebi.astonish.item import ItemBehavior
 from celebi.astonish.models import is_restricted_group
 from celebi.utils import rewrap_exception
 
@@ -25,8 +24,6 @@ __all__ = [
     'TransformCharacter',
     'PokemonNotFoundError',
     'CharacterNotFoundError',
-    'TransformStoreItem',
-    'StoreItemTransformer',
 ]
 
 
@@ -215,41 +212,6 @@ class CharacterTransformer(Transformer):
         return self.__characters
 
 
-class StoreItemTransformer(Transformer):
-    async def transform(
-        self,
-        interaction: CelebiInteraction,
-        value: Any,
-    ) -> ItemBehavior:
-        return self.known_items(interaction)[value]
-
-    async def autocomplete(
-        self,
-        interaction: CelebiInteraction,
-        value: int | float | str,
-    ) -> list[Choice[int | float | str]]:
-        if not (value := str(value)):
-            return []
-
-        # Find the closest matches for the query
-        matches = rapidfuzz.process.extract(
-            value,
-            self.known_items(interaction).keys(),
-            scorer=_similarity,
-            processor=rapidfuzz.utils.default_process,
-            score_cutoff=0.75,
-            limit=5,
-        )
-
-        # Sort by similarity and alphabetically
-        matches.sort(key=lambda m: (-m[1], m[0]))
-        return [Choice(name=s, value=s) for (s, _, _) in matches]
-
-    # TODO: Law of Demeter?
-    def known_items(self, interaction: CelebiInteraction):
-        return interaction.client.astonish_client.items
-
-
 def _similarity(*args: Any, score_cutoff: float, **kwargs: Any) -> float:
     jw_similarity = rapidfuzz.distance.JaroWinkler.normalized_similarity(
         *args,
@@ -279,4 +241,3 @@ def _similarity(*args: Any, score_cutoff: float, **kwargs: Any) -> float:
 
 TransformPokemon = Transform[aiopoke.Pokemon, PokemonTransformer]
 TransformCharacter = Transform['Character', CharacterTransformer]
-TransformStoreItem = Transform[ItemBehavior, StoreItemTransformer]

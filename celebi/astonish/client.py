@@ -14,13 +14,10 @@ from cachetools import TTLCache
 from yarl import URL
 
 from celebi import pokemon
-from celebi.astonish.item import ItemBehavior, LureBehavior
 from celebi.astonish.models import Character, Inventory, MemberCard
 from celebi.astonish.shop import AstonishShopData
 
 if TYPE_CHECKING:
-    from collections.abc import Container
-
     from aiohttp.typedefs import StrOrURL
     from backoff.types import Details
 
@@ -59,7 +56,6 @@ class AstonishClient:
         # Initialized in __aenter__ where we have a running event loop
         self.session: aiohttp.ClientSession
         self.shop: AstonishShopData
-        self.items: dict[str, ItemBehavior]
 
     async def __aenter__(self) -> Self:
         self.session = aiohttp.ClientSession(self.base_url)
@@ -100,9 +96,6 @@ class AstonishClient:
 
         self.poke_client = pokemon.AiopokeClient()
         await self.poke_client.__aenter__()
-
-        self.items = await self._generate_items()
-        logger.info('%d items generated from shop data', len(self.items))
 
         return self
 
@@ -294,66 +287,6 @@ class AstonishClient:
     def _update_in_cache(self, chara: Character) -> None:
         self.character_cache[chara.id] = chara
 
-    async def _generate_items(self) -> dict[str, ItemBehavior]:
-        shop = self.shop
-        items: dict[str, ItemBehavior] = {}
-
-        for region in shop.regions.values():
-            # Baby pokemon lure
-            items[f'{region.name} (Baby)'] = LureBehavior(
-                await _get_lure_pokemon(
-                    self.poke_client,
-                    region.types,
-                    allowlist=shop.baby_pokemon,
-                )
-            )
-
-            # Starter stage 1-3 lures
-            items[f'{region.name} Starter-type (Evolution Stage 1)'] = (
-                LureBehavior(
-                    await _get_lure_pokemon(
-                        self.poke_client,
-                        region.types,
-                        allowlist=shop.stage_1_starters,
-                    )
-                )
-            )
-
-            items[f'{region.name} Starter-type (Evolution Stage 2)'] = (
-                LureBehavior(
-                    await _get_lure_pokemon(
-                        self.poke_client,
-                        region.types,
-                        allowlist=shop.stage_2_starters,
-                    )
-                )
-            )
-
-            items[f'{region.name} Starter-type (Evolution Stage 3)'] = (
-                LureBehavior(
-                    await _get_lure_pokemon(
-                        self.poke_client,
-                        region.types,
-                        allowlist=shop.stage_3_starters,
-                    )
-                )
-            )
-
-            # Evolution stage 1-3 lures
-            items[f'{region.name} (Evolution Stage 1)'] = LureBehavior(
-                await _get_lure_pokemon(self.poke_client, region.types, stage=1)
-            )
-
-            items[f'{region.name} (Evolution Stage 2)'] = LureBehavior(
-                await _get_lure_pokemon(self.poke_client, region.types, stage=2)
-            )
-
-            items[f'{region.name} (Evolution Stage 3)'] = LureBehavior(
-                await _get_lure_pokemon(self.poke_client, region.types, stage=3)
-            )
-
-        return items
-
     @staticmethod
     def _is_logged_in(doc: lxml.html.HtmlElement, /) -> bool:
         (a,) = doc.cssselect(
@@ -411,38 +344,3 @@ class AstonishClient:
             '#main-profile-trainer-class > span.description'
         )
         return span.text_content().strip()
-
-
-async def _get_lure_pokemon(
-    client: pokemon.AiopokeClient,
-    types: Container[str],
-    *,
-    allowlist: Container[str] | None = None,
-    stage: int | None = None,
-):
-    allowed_pkmn = []
-
-    for res in await client.all_pokemon():
-        # Skip Pokemon not on the allowlist
-        if allowlist and res.name not in allowlist:
-            continue
-
-        pkmn = await res.fetch()
-
-        # Skip special Pokemon forms
-        if not pkmn.is_default:
-            continue
-
-        # Skip Pokemon who have no matching types
-        if not any(t.type.name in types for t in pkmn.types):
-            continue
-
-        # Skip Pokemon who aren't at the desired stage of evolution
-        if stage is not None:
-            actual_stage = await client.evolution_stage(pkmn)
-            if actual_stage != stage:
-                continue
-
-        allowed_pkmn.append(pkmn)
-
-    return allowed_pkmn
