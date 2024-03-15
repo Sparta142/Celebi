@@ -17,7 +17,8 @@ WORKDIR /app
 COPY pyproject.toml poetry.lock ./
 
 # Install dependencies with BuildKit caching
-RUN --mount=type=cache,target=$POETRY_CACHE_DIR poetry install --without=dev --no-root --no-ansi
+RUN --mount=type=cache,target=$POETRY_CACHE_DIR \
+    poetry install --without=dev --without=ci --no-root --no-interaction --no-ansi
 
 FROM python:3.12-slim-bookworm
 
