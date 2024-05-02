@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, NamedTuple, Self
 import aiohttp
 import backoff
 import lxml.html
+from aiopoke.objects.resources.pokemon.pokemon import Pokemon
 from cachetools import TTLCache
 from yarl import URL
 
@@ -22,6 +23,7 @@ if TYPE_CHECKING:
     from collections.abc import Container
 
     from aiohttp.typedefs import StrOrURL
+    from aiopoke import Pokemon
     from backoff.types import Details
 
 __all__ = ['AstonishClient']
@@ -100,6 +102,7 @@ class AstonishClient:
         self.poke_client = pokemon.AiopokeClient()
         await self.poke_client.__aenter__()
 
+        logger.info('Starting to generate items...')
         self.items = await self._generate_items()
         logger.info('%d items generated from shop data', len(self.items))
 
@@ -418,30 +421,35 @@ async def _get_lure_pokemon(
     *,
     allowlist: Container[str] | None = None,
     stage: int | None = None,
-):
-    allowed_pkmn = []
+) -> list[Pokemon]:
+    allowed_pkmn: list[Pokemon] = []
 
-    for res in await client.all_pokemon():
+    for res in await client.all_pokemon_species():
         # Skip Pokemon not on the allowlist
         if allowlist and res.name not in allowlist:
             continue
 
-        pkmn = await res.fetch()
+        species = await res.fetch()
 
-        # Skip special Pokemon forms
-        if not pkmn.is_default:
-            continue
+        # Skip Pokemon who aren't at the desired stage of evolution
+        if stage is not None:
+            actual_stage = await client.evolution_stage(species)
+            if actual_stage != stage:
+                continue
+
+        # Find the default variety for this species
+        for variety in species.varieties:
+            if variety.is_default:
+                pkmn = await variety.pokemon.fetch()
+                break
+        else:
+            continue  # No default variety found
 
         # Skip Pokemon who have no matching types
         if not any(t.type.name in types for t in pkmn.types):
             continue
 
-        # Skip Pokemon who aren't at the desired stage of evolution
-        if stage is not None:
-            actual_stage = await client.evolution_stage(pkmn)
-            if actual_stage != stage:
-                continue
-
+        # All checks passed, this Pokemon is an acceptable candidate
         allowed_pkmn.append(pkmn)
 
     return allowed_pkmn

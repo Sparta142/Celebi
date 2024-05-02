@@ -8,27 +8,29 @@ from aiopoke.utils.minimal_resources import MinimalResource
 
 
 class AiopokeClient(aiopoke.AiopokeClient):
-    _all_pokemon: list[MinimalResource[aiopoke.Pokemon]] = []
-    _evolution_stages: dict[int, int] = {}  # species_id -> stage
+    def __init__(self, *, session=None) -> None:
+        super().__init__(session=session)
 
-    async def all_pokemon(self):
-        if self._all_pokemon:
-            return self._all_pokemon
+        self._all_species: list[MinimalResource[aiopoke.PokemonSpecies]] = []
+        self._evolution_stages: dict[int, int] = {}  # species_id -> stage
 
-        response = await self.http.get('pokemon/?limit=2147483647')
+    async def all_pokemon_species(self):
+        if self._all_species:
+            return self._all_species
+
+        response = await self.http.get('pokemon-species/?limit=2147483647')
 
         for data in response['results']:
-            res = MinimalResource[aiopoke.Pokemon](**data)
+            res = MinimalResource[aiopoke.PokemonSpecies](**data)
             res._client = self
-            self._all_pokemon.append(res)
+            self._all_species.append(res)
 
-        return self._all_pokemon
+        return self._all_species
 
-    async def evolution_stage(self, pokemon: aiopoke.Pokemon) -> int:
+    async def evolution_stage(self, species: aiopoke.PokemonSpecies) -> int:
         with contextlib.suppress(KeyError):
-            return self._evolution_stages[pokemon.species.id]
+            return self._evolution_stages[species.id]
 
-        species = await pokemon.species.fetch(client=self)
         chain = await species.evolution_chain.fetch(client=self)
         links = [chain.chain]
 
@@ -47,7 +49,7 @@ class AiopokeClient(aiopoke.AiopokeClient):
 
             links = successors
 
-        return self._evolution_stages[pokemon.species.id]
+        return self._evolution_stages[species.id]
 
 
 async def evolution_graph(
