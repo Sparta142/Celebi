@@ -47,6 +47,10 @@ class AstonishClient:
 
     base_url = URL('https://astonish.jcink.net')
 
+    session: aiohttp.ClientSession
+    shop: AstonishShopData
+    items: dict[str, ItemBehavior]
+
     def __init__(self, username: str, password: str) -> None:
         self.username = username
         self.password = password
@@ -55,11 +59,6 @@ class AstonishClient:
             maxsize=256,
             ttl=15 * 60,  # 15 minutes
         )
-
-        # Initialized in __aenter__ where we have a running event loop
-        self.session: aiohttp.ClientSession
-        self.shop: AstonishShopData
-        self.items: dict[str, ItemBehavior]
 
     async def __aenter__(self) -> Self:
         self.session = aiohttp.ClientSession(self.base_url)

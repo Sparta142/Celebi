@@ -27,6 +27,9 @@ ASTONISH_PASSWORD = os.environ['ASTONISH_PASSWORD']
 
 
 class CelebiClient(Bot):
+    poke_client: aiopoke.AiopokeClient
+    astonish_client: AstonishClient
+
     def __init__(self) -> None:
         super().__init__([], intents=discord.Intents.default())
 
@@ -34,10 +37,6 @@ class CelebiClient(Bot):
         self.allowed_mentions = discord.AllowedMentions.none()
 
         self._presentation: Presentation | None = None
-
-        # Initialized in .setup_hook()
-        self.poke_client: aiopoke.AiopokeClient
-        self.astonish_client: AstonishClient
 
     @property
     def presentation(self) -> Presentation:
