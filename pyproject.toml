@@ -23,7 +23,7 @@ lxml = "^4.9.3"
 networkx = "^3.2.1"
 pydantic = "^2.4.2"
 python = "^3.12"
-rapidfuzz = "^3.5.2"
+rapidfuzz = "^3.11.0"
 ruamel-yaml = "^0.18.5"
 yarl = "^1.9.2"
 
