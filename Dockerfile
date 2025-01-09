@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM python:3.12-bookworm as build
+FROM python:3.13-bookworm as build
 
 ARG POETRY_VERSION="1.7.0"
 
@@ -19,7 +19,7 @@ COPY pyproject.toml poetry.lock ./
 # Install dependencies with BuildKit caching
 RUN --mount=type=cache,target=$POETRY_CACHE_DIR poetry install --without=dev --no-root --no-ansi
 
-FROM python:3.12-slim-bookworm
+FROM python:3.13-slim-bookworm
 
 LABEL org.opencontainers.image.source https://github.com/Sparta142/Celebi
 
