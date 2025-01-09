@@ -20,7 +20,7 @@ cssselect = "^1.2.0"
 "discord.py" = { version = "^2.3", extras = ["speed"] }
 frozendict = "^2.3.10"
 lxml = "^4.9.3"
-networkx = "^3.2.1"
+networkx = "^3.4.2"
 pydantic = "^2.4.2"
 python = "^3.12"
 rapidfuzz = "^3.5.2"
